@@ -99,6 +99,118 @@ async function fetchMerchants() {
   return data;
 }
 
+const KYC_STAGE_LABELS = {
+  document_review: 'Document Review',
+  fica_check: 'FICA Check',
+  aml_screening: 'AML Screening',
+  manual_review: 'Manual Review',
+  approved: 'Approved',
+  rejected: 'Rejected',
+};
+
+function mapKycRow(row) {
+  const days = Math.max(0, Math.floor((Date.now() - new Date(row.submitted_at).getTime()) / 86400000));
+  return {
+    id: row.id,
+    name: row.business_name,
+    type: row.business_type,
+    mcc: row.mcc,
+    stage: KYC_STAGE_LABELS[row.stage] || row.stage,
+    decided: ['approved', 'rejected'].includes(row.stage),
+    risk: row.risk.charAt(0).toUpperCase() + row.risk.slice(1),
+    submitted: new Date(row.submitted_at).toISOString().slice(0, 10),
+    days,
+  };
+}
+
+async function fetchKycCases() {
+  const { data, error } = await supabase
+    .from('kyc_cases')
+    .select('*')
+    .order('submitted_at', { ascending: false });
+  if (error) throw error;
+  return data.map(mapKycRow);
+}
+
+async function decideKyc(caseId, decision, reason) {
+  const { data, error } = await supabase.functions.invoke('kyc-decision', { body: { caseId, decision, reason } });
+  if (error) throw error;
+  return data;
+}
+
+const DISPUTE_STAGE_LABELS = { evidence_required: 'Evidence Required', under_review: 'Under Review', resolved: 'Resolved' };
+
+function mapDisputeRow(row) {
+  const deadline = row.deadline_at ? Math.ceil((new Date(row.deadline_at).getTime() - Date.now()) / 86400000) : null;
+  return {
+    id: row.id,
+    txn: row.transaction_ref,
+    cust: row.transactions?.customer_name || '—',
+    amount: centsToRand(row.amount_cents),
+    reason: row.reason,
+    scheme: row.scheme,
+    code: row.reason_code,
+    deadline,
+    status: row.status,
+    stage: DISPUTE_STAGE_LABELS[row.stage] || row.stage,
+  };
+}
+
+async function fetchDisputes() {
+  const { data, error } = await supabase
+    .from('disputes')
+    .select('*, transactions(customer_name)')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data.map(mapDisputeRow);
+}
+
+async function resolveDispute(disputeId, outcome, note) {
+  const { data, error } = await supabase.functions.invoke('dispute-resolve', { body: { disputeId, outcome, note } });
+  if (error) throw error;
+  return data;
+}
+
+function mapApiKeyRow(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    prefix: row.key_prefix,
+    environment: row.environment,
+    scopes: row.scopes,
+    revoked: !!row.revoked_at,
+    createdAt: new Date(row.created_at).toISOString().slice(0, 10),
+    lastUsed: row.last_used_at ? new Date(row.last_used_at).toISOString().slice(0, 10) : 'Never',
+  };
+}
+
+async function fetchApiKeys() {
+  const { data, error } = await supabase
+    .from('api_keys')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data.map(mapApiKeyRow);
+}
+
+async function createApiKey(name, environment, scopes) {
+  const { data, error } = await supabase.functions.invoke('manage-api-key', { body: { action: 'create', name, environment, scopes } });
+  if (error) throw error;
+  return data;
+}
+
+async function revokeApiKey(keyId) {
+  const { data, error } = await supabase.functions.invoke('manage-api-key', { body: { action: 'revoke', keyId } });
+  if (error) throw error;
+  return data;
+}
+
+async function hasPermission(perm) {
+  const { data, error } = await supabase.rpc('has_permission', { perm });
+  if (error) { console.error('[BipraPay] has_permission check failed', error); return false; }
+  return !!data;
+}
+
 function subscribeTransactions(onInsert) {
   return supabase
     .channel('public:transactions')
@@ -195,6 +307,14 @@ window.SP_DB = {
   fetchRefunds,
   fetchAuditLog,
   fetchMerchants,
+  fetchKycCases,
+  decideKyc,
+  fetchDisputes,
+  resolveDispute,
+  fetchApiKeys,
+  createApiKey,
+  revokeApiKey,
+  hasPermission,
   subscribeTransactions,
   subscribeRefunds,
   subscribeAuditLog,

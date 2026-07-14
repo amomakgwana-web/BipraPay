@@ -10665,7 +10665,11 @@ function dspTab(t){
         <td><span style="font-family:var(--mono);font-size:10px;background:var(--bg2);padding:2px 6px;border-radius:4px">${d.scheme} ${d.code}</span></td>
         <td><span style="font-size:11px;font-weight:700;color:${d.deadline<=3?'var(--red)':d.deadline<=7?'var(--amb)':'var(--gr)'}">${d.deadline}d left</span></td>
         <td><span class="badge ${d.status==='urgent'?'b-failed':'b-pending'}">${d.stage}</span></td>
-        <td><button class="btn btn-primary btn-xs" onclick="openModal('evidenceModal')">Submit Evidence</button></td>
+        <td style="display:flex;gap:4px;white-space:nowrap">
+          <button class="btn btn-primary btn-xs" onclick="openModal('evidenceModal')">Submit Evidence</button>
+          <button class="btn btn-success btn-xs" onclick="resolveDisputeAction('${d.id}','won')">Won</button>
+          <button class="btn btn-danger btn-xs" onclick="resolveDisputeAction('${d.id}','lost')">Lost</button>
+        </td>
       </tr>`).join('')}</tbody>
     </table></div>
     <div style="margin-top:14px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:var(--r2);padding:12px;font-size:12px;color:var(--red)">
@@ -11084,7 +11088,13 @@ function kycTab(t){
         <td><span style="font-size:11px;font-weight:700;color:${k.risk==='High'?'var(--red)':k.risk==='Medium'?'var(--amb)':'var(--gr)'}">${k.risk}</span></td>
         <td style="color:var(--ink4);font-size:12px">${k.submitted}</td>
         <td class="mono">${k.days}d</td>
-        <td style="display:flex;gap:4px"><button class="btn btn-primary btn-xs">Review</button><button class="btn btn-ghost btn-xs">Approve</button></td>
+        <td style="display:flex;gap:4px">
+          <button class="btn btn-primary btn-xs" onclick="openMerchantDetail('${k.id}')">Review</button>
+          ${k.decided ? `<span style="font-size:11px;color:var(--ink4)">${k.stage}</span>` : `
+            <button class="btn btn-success btn-xs" onclick="kycDecisionAction('${k.id}','approve',${JSON.stringify(k.name)})">Approve</button>
+            <button class="btn btn-danger btn-xs" onclick="kycDecisionAction('${k.id}','reject',${JSON.stringify(k.name)})">Reject</button>
+          `}
+        </td>
       </tr>`).join('')}</tbody>
     </table></div>`;
   } else if(t==='kyc'){
@@ -16320,39 +16330,12 @@ function renderDrawerSettings(m, el){
 }
 
 // ══════════════════════════════════════════════════════════════
-// PATCH KYC PIPELINE — wire Review button to drawer
+// PATCH KYC PIPELINE — the 'pipeline' tab now wires Review/Approve/Reject
+// directly in its own markup (see kycTab above); this only still handles 'pasa'.
 // ══════════════════════════════════════════════════════════════
 const _origKycTab = kycTab;
 window.kycTab = function(t){
   _origKycTab(t);
-  if(t==='pipeline'){
-    setTimeout(()=>{
-      // Replace dead Review buttons with drawer opener
-      document.querySelectorAll('#kycContent .btn-primary').forEach(btn=>{
-        if(btn.textContent.trim()==='Review'){
-          const row  = btn.closest('tr');
-          const idCell = row?.querySelector('td.mono');
-          const appId  = idCell?.textContent?.trim();
-          if(appId){
-            btn.onclick = ()=>openMerchantDetail(appId);
-          }
-        }
-      });
-      // Replace Approve button with action
-      document.querySelectorAll('#kycContent .btn-ghost').forEach(btn=>{
-        if(btn.textContent.trim()==='Approve'){
-          const row  = btn.closest('tr');
-          const nameCell = row?.querySelectorAll('td')[1];
-          const name = nameCell?.textContent?.trim()||'Merchant';
-          btn.onclick = ()=>{
-            if(confirm(`Approve ${name}? This will activate the merchant account.`)){
-              toast(`${name} approved — API keys provisioned, welcome email sent`, 'success', 4000);
-            }
-          };
-        }
-      });
-    }, 60);
-  }
   if(t==='pasa'){
     // Wire Register button to wizard
     setTimeout(()=>{
@@ -16364,6 +16347,57 @@ window.kycTab = function(t){
     }, 60);
   }
 };
+
+async function kycDecisionAction(caseId, decision, name){
+  const verb = decision==='approve' ? 'Approve' : 'Reject';
+  if(!confirm(`${verb} ${name}?${decision==='approve'?' This will activate the merchant account.':''}`)) return;
+  const reason = decision==='reject' ? (prompt('Reason for rejection (optional):')||null) : null;
+  try{
+    const db = await _waitForSpDb();
+    await db.decideKyc(caseId, decision, reason);
+    toast(decision==='approve'?`${name} approved — merchant account activated`:`${name} rejected`, decision==='approve'?'success':'warn', 4000);
+    await refreshKycPipeline();
+  }catch(e){
+    toast('KYC decision failed: '+(e?.message||e),'warn',4000);
+  }
+}
+
+async function refreshKycPipeline(){
+  try{
+    const db = await _waitForSpDb();
+    const cases = await db.fetchKycCases();
+    KYC_PIPELINE.length = 0;
+    cases.forEach(c=>KYC_PIPELINE.push(c));
+    if(document.getElementById('kycContent') && document.querySelector('#kycTabRow .tab.active')?.getAttribute('onclick')?.includes("'pipeline'")){
+      kycTab('pipeline');
+    }
+  }catch(e){ console.error('[BipraPay] Failed to load KYC pipeline from Supabase',e); }
+}
+
+async function resolveDisputeAction(disputeId, outcome){
+  if(!confirm(`Mark ${disputeId} as ${outcome}?`)) return;
+  const note = prompt('Resolution note (optional):') || null;
+  try{
+    const db = await _waitForSpDb();
+    await db.resolveDispute(disputeId, outcome, note);
+    toast(`${disputeId} resolved — ${outcome}`, outcome==='won'?'success':'warn', 4000);
+    await refreshDisputes();
+  }catch(e){
+    toast('Dispute resolution failed: '+(e?.message||e),'warn',4000);
+  }
+}
+
+async function refreshDisputes(){
+  try{
+    const db = await _waitForSpDb();
+    const open = await db.fetchDisputes();
+    DISPUTES_DATA.length = 0;
+    open.filter(d=>d.stage!=='Resolved').forEach(d=>DISPUTES_DATA.push(d));
+    if(document.getElementById('dspContent') && document.querySelector('#dspTabRow .tab.active')?.getAttribute('onclick')?.includes("'open'")){
+      dspTab('open');
+    }
+  }catch(e){ console.error('[BipraPay] Failed to load disputes from Supabase',e); }
+}
 
 // ══════════════════════════════════════════════════════════════
 // PATCH MERCHANT LIST — wire Manage button to drawer
@@ -17787,47 +17821,17 @@ function renderSettingsApi(el){
   el.innerHTML = `
     <div style="background:var(--red-bg);border:1px solid var(--red-bd);border-radius:var(--r2);padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px">
       <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--red)" stroke-width="2"><path d="M10 3l7 14H3L10 3z" stroke-linejoin="round"/><path d="M10 8v4M10 14v.5" stroke-linecap="round"/></svg>
-      <div style="font-size:12.5px;color:var(--red)"><strong>Never share your live secret key.</strong> Store it in environment variables — not in code, Slack, or email.</div>
+      <div style="font-size:12.5px;color:var(--red)"><strong>Never share your live secret key.</strong> Store it in environment variables — not in code, Slack, or email. The full key is only ever shown once, right after you create it.</div>
     </div>
 
     <div class="g2 gap14">
       <div>
         <div class="settings-section">
           <div class="settings-section-title">API Keys</div>
-          <div style="display:flex;flex-direction:column;gap:10px">
-            ${[
-              {type:'TEST',label:'Test Key',key:'sk_test_••••••••••••4821',last:'Today 09:28',env:'Sandbox only — no real transactions'},
-              {type:'LIVE',label:'Live Key',key:'sk_live_••••••••••••3910',last:'Today 08:52',env:'Production — treats all transactions as real'},
-            ].map(k=>`
-              <div style="border:1.5px solid ${k.type==='LIVE'?'var(--gr-bd)':'var(--amb-bd)'};border-radius:var(--r2);overflow:hidden">
-                <div style="background:${k.type==='LIVE'?'var(--gr-bg)':'var(--amb-bg)'};padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
-                  <div style="display:flex;align-items:center;gap:8px">
-                    <span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:4px;background:${k.type==='LIVE'?'var(--gr)':'var(--amb)'};color:white">${k.type}</span>
-                    <span style="font-size:12.5px;font-weight:600;color:var(--ink)">${k.label}</span>
-                  </div>
-                  <span style="font-size:11px;color:var(--ink4)">Last used: ${k.last}</span>
-                </div>
-                <div style="padding:12px 14px">
-                  <div style="font-family:var(--mono);font-size:13px;color:var(--ink);margin-bottom:10px;letter-spacing:.04em">${k.key}</div>
-                  <div style="font-size:11.5px;color:var(--ink4);margin-bottom:10px">${k.env}</div>
-                  <div style="display:flex;gap:6px">
-                    <button class="btn btn-ghost btn-sm" onclick="toast('Copied','info',1200)">
-                      <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="7" width="11" height="11" rx="2"/><path d="M4 13V4h9" stroke-linecap="round"/></svg>
-                      Copy
-                    </button>
-                    <button class="btn btn-ghost btn-sm">
-                      <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="3"/><path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z"/></svg>
-                      Reveal
-                    </button>
-                    <button class="btn btn-danger btn-sm" onclick="if(!confirm('Rotate ${k.type} key? Old key revoked immediately.'))return;toast('${k.type} key rotated','warn',4000)">
-                      <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10a6 6 0 1012 0M4 10V6M4 10H8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                      Rotate
-                    </button>
-                  </div>
-                </div>
-              </div>`).join('')}
+          <div id="apiKeyList" style="display:flex;flex-direction:column;gap:10px">
+            <div class="skeleton skeleton-stat"></div>
           </div>
-          <button class="btn btn-ghost btn-sm" style="margin-top:10px">
+          <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="createApiKeyAction()">
             <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg>
             Create Additional Key
           </button>
@@ -17868,6 +17872,68 @@ function renderSettingsApi(el){
         </div>
       </div>
     </div>`;
+  refreshApiKeyList();
+}
+
+async function refreshApiKeyList(){
+  const list = document.getElementById('apiKeyList');
+  if(!list) return;
+  try{
+    const db = await _waitForSpDb();
+    const keys = await db.fetchApiKeys();
+    if(!keys.length){
+      list.innerHTML = `<div style="font-size:12.5px;color:var(--ink4);padding:12px">No API keys yet — create one to get started.</div>`;
+      return;
+    }
+    list.innerHTML = keys.map(k=>`
+      <div style="border:1.5px solid ${k.environment==='live'?'var(--gr-bd)':'var(--amb-bd)'};border-radius:var(--r2);overflow:hidden;opacity:${k.revoked?'.55':'1'}">
+        <div style="background:${k.environment==='live'?'var(--gr-bg)':'var(--amb-bg)'};padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:4px;background:${k.environment==='live'?'var(--gr)':'var(--amb)'};color:white">${k.environment.toUpperCase()}</span>
+            <span style="font-size:12.5px;font-weight:600;color:var(--ink)">${k.name}</span>
+            ${k.revoked?'<span class="badge b-failed">Revoked</span>':''}
+          </div>
+          <span style="font-size:11px;color:var(--ink4)">Last used: ${k.lastUsed}</span>
+        </div>
+        <div style="padding:12px 14px">
+          <div style="font-family:var(--mono);font-size:13px;color:var(--ink);margin-bottom:10px;letter-spacing:.04em">${k.prefix}</div>
+          <div style="font-size:11.5px;color:var(--ink4);margin-bottom:10px">Created ${k.createdAt} · full secret was shown once, at creation</div>
+          ${k.revoked?'':`<button class="btn btn-danger btn-sm" onclick="revokeApiKeyAction('${k.id}','${k.name.replace(/'/g,"\\'")}')">
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l12 12M16 4L4 16" stroke-linecap="round"/></svg>
+            Revoke
+          </button>`}
+        </div>
+      </div>`).join('');
+  }catch(e){
+    list.innerHTML = `<div style="font-size:12.5px;color:var(--red);padding:12px">Failed to load API keys: ${e?.message||e}</div>`;
+  }
+}
+
+async function createApiKeyAction(){
+  const name = prompt('Name for this key (e.g. "Server integration"):');
+  if(!name) return;
+  const environment = confirm('Click OK for a LIVE key, Cancel for a TEST key.') ? 'live' : 'test';
+  try{
+    const db = await _waitForSpDb();
+    const result = await db.createApiKey(name, environment, []);
+    alert(`Your new ${environment} key (shown only this once — copy it now):\n\n${result.secret}`);
+    toast('API key created','success',4000);
+    await refreshApiKeyList();
+  }catch(e){
+    toast('Failed to create API key: '+(e?.message||e),'warn',4000);
+  }
+}
+
+async function revokeApiKeyAction(keyId, name){
+  if(!confirm(`Revoke "${name}"? Any integration using it will stop working immediately.`)) return;
+  try{
+    const db = await _waitForSpDb();
+    await db.revokeApiKey(keyId);
+    toast(`${name} revoked`,'warn',4000);
+    await refreshApiKeyList();
+  }catch(e){
+    toast('Failed to revoke API key: '+(e?.message||e),'warn',4000);
+  }
 }
 
 
@@ -20123,6 +20189,9 @@ async function loadLiveData(){
     _auditLive = await db.fetchAuditLog();
     if(typeof renderAuditLog==='function') renderAuditLog();
   }catch(e){ console.error('[BipraPay] Failed to load audit log from Supabase',e); }
+
+  await refreshKycPipeline();
+  await refreshDisputes();
 
   if(_liveSynced) return; // subscriptions already active from a previous login in this tab
   _liveSynced = true;
