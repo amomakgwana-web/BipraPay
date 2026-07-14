@@ -59,8 +59,9 @@
   --shadow-brand: 0 4px 20px rgba(240,90,0,.30), 0 1px 4px rgba(240,90,0,.18);
   --shadow-brand-lg: 0 8px 32px rgba(240,90,0,.35), 0 2px 8px rgba(240,90,0,.22);
   /* Mesh gradient background */
-  --mesh-light: linear-gradient(150deg, #fdf0e8 0%, #f9f0ec 20%, #fdeee4 45%, #f5eef8 70%, #fbeee6 100%);
-  --mesh-dark:  linear-gradient(150deg, #180a04 0%, #1a0e06 20%, #140808 45%, #130c1a 70%, #1a0c06 100%);
+  --mesh-light: #f4eee7;
+  --mesh-dark:  #150c0a;
+  --orb1:#F05A00;--orb2:#0047FF;--orb3:#6D28D9;
   /* Font */
   --font:-apple-system,'SF Pro Display','SF Pro Text','Inter','DM Sans',BlinkMacSystemFont,'helvetica neue',system-ui,sans-serif;
   --mono:'JetBrains Mono','SF Mono','Fira Mono',ui-monospace,'Courier New',monospace;
@@ -79,7 +80,18 @@ html,body{
   text-rendering:optimizeLegibility;
   font-feature-settings:'kern' 1,'liga' 1,'calt' 1;
 }
-body{font-family:var(--font);color:var(--ink);font-size:13.5px;display:flex;flex-direction:column}
+body{font-family:var(--font);color:var(--ink);font-size:13.5px;display:flex;flex-direction:column;position:relative;isolation:isolate}
+
+/* ── Ambient backdrop for glass surfaces — solid colour + blur, no gradients ── */
+.bg-orbs{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.bg-orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.38}
+.bg-orb-1{width:70vw;height:70vw;top:-25%;left:-20%;background:var(--orb1)}
+.bg-orb-2{width:65vw;height:65vw;bottom:-30%;right:-20%;background:var(--orb2);opacity:.24}
+.bg-orb-3{width:55vw;height:55vw;top:15%;left:40%;background:var(--orb3);opacity:.22}
+html.dark .bg-orb{opacity:.42}
+html.dark .bg-orb-2{opacity:.28}
+html.dark .bg-orb-3{opacity:.26}
+
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:6px}
@@ -95,7 +107,7 @@ header{
 }
 header::after{
   content:'';position:absolute;inset-x:0;bottom:0;height:1px;
-  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.8) 30%,rgba(255,255,255,.8) 70%,transparent 100%);
+  background:rgba(255,255,255,.55);
   pointer-events:none;
 }
 .hdr-logo{
@@ -203,7 +215,7 @@ aside{
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* ── MAIN ── */
-main{flex:1;overflow-y:auto;background:var(--bg)}
+main{flex:1;overflow-y:auto;background:transparent}
 .page{display:none;flex-direction:column;min-height:100%}
 .page.active{display:flex}
 
@@ -252,15 +264,6 @@ main{flex:1;overflow-y:auto;background:var(--bg)}
   box-shadow:var(--shadow-lg);
   transform:translateY(-1px);
 }
-.card::before{
-  content:'';
-  position:absolute;
-  inset:0;
-  border-radius:inherit;
-  background:linear-gradient(160deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.0) 60%);
-  pointer-events:none;
-  z-index:0;
-}
 .card > * { position:relative; z-index:1; }
 .card-sm{padding:12px}
 .card-hdr{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
@@ -280,15 +283,6 @@ main{flex:1;overflow-y:auto;background:var(--bg)}
 .stat:hover{
   box-shadow:var(--shadow-md);
   transform:translateY(-1px);
-}
-.stat::before{
-  content:'';
-  position:absolute;
-  inset:0;
-  border-radius:inherit;
-  background:linear-gradient(160deg, rgba(255,255,255,0.50) 0%, rgba(255,255,255,0.0) 55%);
-  pointer-events:none;
-  z-index:0;
 }
 .stat > * { position:relative; z-index:1; }
 .stat::after{content:'';position:absolute;top:0;left:0;width:3px;height:100%;border-radius:var(--r2) 0 0 var(--r2)}
@@ -338,13 +332,13 @@ td.num{font-family:var(--mono);font-weight:600}
   display:inline-flex;align-items:center;gap:6px;
 }
 .btn-primary{
-  background:linear-gradient(145deg, #FF7A28 0%, var(--brand) 50%, #C44800 100%);
+  background:var(--brand);
   color:white;
   border:1px solid var(--border);
   box-shadow:var(--shadow-brand);
 }
 .btn-primary:hover{
-  background:linear-gradient(145deg, #FF8C40 0%, #F05A00 50%, #D44F00 100%);
+  background:var(--brand2);
   box-shadow:var(--shadow-brand-lg);
   transform:translateY(-1px);
 }
@@ -425,7 +419,7 @@ textarea.form-input{height:auto;padding:8px 10px;resize:vertical;line-height:1.5
 }
 .modal::before{
   content:'';position:absolute;inset-x:0;top:0;height:1px;
-  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,1) 30%,rgba(255,255,255,1) 70%,transparent 100%);
+  background:rgba(255,255,255,.8);
   pointer-events:none;z-index:10;
 }
 .modal-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
@@ -681,9 +675,7 @@ html.dark {
 /* Dark mode glass surfaces — backgrounds set via glass tokens above */
 html.dark header { background:rgba(26,29,46,0.85) !important; border-bottom-color:rgba(255,255,255,0.07) !important; }
 html.dark .card  { background:rgba(26,29,46,0.70) !important; border-color:rgba(255,255,255,0.08) !important; }
-html.dark .card::before { background:linear-gradient(160deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.0) 55%) !important; }
 html.dark .stat  { background:rgba(26,29,46,0.70) !important; border-color:rgba(255,255,255,0.07) !important; }
-html.dark .stat::before { background:linear-gradient(160deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.0) 55%) !important; }
 html.dark .tbl-wrap { background:rgba(23,26,43,0.60) !important; border-color:rgba(255,255,255,0.07) !important; }
 html.dark .modal { background:rgba(30,34,53,0.85) !important; border-color:rgba(255,255,255,0.12) !important; }
 html.dark .page-hdr { background:rgba(26,29,46,0.75) !important; border-bottom-color:rgba(255,255,255,0.06) !important; }
@@ -804,7 +796,7 @@ html.dark #toastContainer .toast{background:var(--bg2)!important;border-color:va
 
 /* ── GETTING STARTED BANNER ── */
 .gs-banner{
-  background:linear-gradient(135deg,var(--brand) 0%,#1a8c42 100%);
+  background:var(--brand);
   border-radius:var(--r2);padding:16px 20px;margin-bottom:14px;
   display:flex;align-items:center;gap:16px;position:relative;overflow:hidden;
 }
@@ -871,12 +863,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 /* ── SKELETON LOADING ── */
 .skeleton {
-  background: linear-gradient(90deg, var(--bg2) 25%, var(--bg3) 50%, var(--bg2) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
+  background: var(--bg2);
+  animation: shimmer 1.4s ease-in-out infinite;
   border-radius: var(--r);
 }
-@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+@keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:.5} }
 .skeleton-line { height: 13px; margin-bottom: 8px; }
 .skeleton-line.short { width: 60%; }
 .skeleton-line.medium { width: 80%; }
@@ -1112,7 +1103,7 @@ html.dark .wa-input { background: #2a2f3a; color: #e0e0e0; }
 
 /* Wallet card */
 .wa-wallet-card {
-  background: linear-gradient(135deg, var(--wa3) 0%, var(--wa2) 60%, var(--wa) 100%);
+  background: var(--wa);
   border-radius: var(--r2);
   padding: 20px 22px;
   color: white;
@@ -2557,7 +2548,7 @@ html.dark .tab-row .tab.active { background: var(--bg3); }
 
 /* ── Live payment terminal ── */
 .terminal-frame {
-  background:linear-gradient(160deg,#1a1d2e 0%,#0f1120 100%);
+  background:#14172a;
   border-radius:16px;padding:20px;color:white;font-family:var(--mono);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 60px rgba(11,15,26,.4);
 }
@@ -2586,7 +2577,7 @@ html.dark .tab-row .tab.active { background: var(--bg3); }
 
 /* ── DCC (Dynamic Currency Conversion) ── */
 .dcc-offer {
-  background:linear-gradient(135deg,var(--cp-bg) 0%,var(--pur-bg) 100%);
+  background:var(--cp-bg);
   border:1.5px solid var(--cp-bd);border-radius:var(--r2);padding:16px;
 }
 .dcc-rate { font-size:26px;font-weight:800;font-family:var(--mono);color:var(--cp); }
@@ -2986,7 +2977,7 @@ html.dark .tbl-wrap tr:hover td { background: #1e2532; }
 html.dark .form-input { background: #1e2532; border-color: #2a3142; color: #c9d1e9; }
 html.dark .code-block { background: #171e2c; border-color: #2a3142; }
 html.dark .sb-flyout { background: #1a2030; border-color: #2a3142; box-shadow: 0 8px 40px rgba(0,0,0,.5); }
-html.dark .auth-gate { background: linear-gradient(135deg,#0f1a10 0%,#0d1117 60%,#111827 100%); }
+html.dark .auth-gate { background: #0d1218; }
 html.dark .auth-card { background: #1e2532; border-color: #2a3142; }
 
 /* ── Scrollbar: thin & styled ── */
@@ -3290,14 +3281,6 @@ html.dark .tbl-wrap tr:hover td { background:var(--white) !important; }
   box-shadow: var(--shadow-lg) !important;
 }
 
-/* Stat card colour top strip — richer gradient */
-.stat.green::after  { background: linear-gradient(90deg, var(--gr), var(--brand)); }
-.stat.blue::after   { background: linear-gradient(90deg, var(--cp), #0066ff); }
-.stat.amber::after  { background: linear-gradient(90deg, var(--amb), #e8a000); }
-.stat.red::after    { background: linear-gradient(90deg, var(--red), #ff4040); }
-.stat.purple::after { background: linear-gradient(90deg, var(--pur), #8b44f0); }
-.stat.aws::after    { background: linear-gradient(90deg, var(--aws), #ff8c3a); }
-
 /* g2/g3/g4 grid cells — preserve glass through grid */
 .g2, .g3, .g4, .g-main, .g-aws {
   position: relative;
@@ -3348,7 +3331,7 @@ html.dark .auth-input {
 
 /* Auth button glass */
 .auth-btn {
-  background: linear-gradient(145deg, #FF7A28 0%, var(--brand) 50%, #C44800 100%) !important;
+  background: var(--brand) !important;
   box-shadow: var(--shadow-brand) !important;
   border:1px solid var(--border) !important;
 }
@@ -3358,7 +3341,7 @@ html.dark .auth-input {
 
 /* Pay flow step glass */
 .pay-flow-num.done {
-  background: linear-gradient(135deg, var(--gr), var(--brand));
+  background: var(--gr);
   box-shadow: 0 2px 8px rgba(36,174,82,.35);
 }
 
@@ -3625,7 +3608,7 @@ html.dark #aiPanel {
   color: var(--ink);
 }
 .ai-user .ai-bubble {
-  background: linear-gradient(135deg,#7c3aed,#4f46e5);
+  background: var(--pur);
   color: white;
   border-bottom-right-radius: 4px;
 }
@@ -3713,6 +3696,13 @@ html.dark .hdr-ai-btn {
 </head>
 <!-- canonical styles injected at end for max specificity -->
 <body>
+
+<!-- Ambient glass backdrop — solid-colour blurred orbs, no gradients -->
+<div class="bg-orbs" aria-hidden="true">
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-orb bg-orb-3"></div>
+</div>
 
 <!-- ════════════ HEADER ════════════ -->
 <header>
@@ -16817,7 +16807,7 @@ function saTab(t){
 
   if(t==='realtime'){
     el.innerHTML=`
-      <div style="background:linear-gradient(135deg,#004B87 0%,#0072C6 100%);border-radius:var(--r2);padding:18px 22px;margin-bottom:18px;color:white">
+      <div style="background:#0072C6;border-radius:var(--r2);padding:18px 22px;margin-bottom:18px;color:white">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
           <span class="payshap-badge" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3)">PayShap</span>
           <div style="font-size:15px;font-weight:700">PayShap — SARB Real-Time Payment Rail</div>
@@ -17486,9 +17476,9 @@ window.settingsTab = function(t){
 function renderSettingsProfile(el){
   el.innerHTML = `
     <!-- Avatar hero -->
-    <div style="background:linear-gradient(135deg,var(--brand3) 0%,var(--white) 60%);border:1px solid var(--brand-border);border-radius:var(--r2);padding:24px;margin-bottom:20px;display:flex;align-items:center;gap:20px">
+    <div style="background:var(--brand3);border:1px solid var(--brand-border);border-radius:var(--r2);padding:24px;margin-bottom:20px;display:flex;align-items:center;gap:20px">
       <div style="position:relative;cursor:pointer" onclick="toast('Photo upload — connect S3 to enable','info')">
-        <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--brand) 0%,var(--gr2) 100%);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:white;letter-spacing:-1px;box-shadow:0 4px 16px rgba(36,174,82,.3)">AM</div>
+        <div style="width:72px;height:72px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:white;letter-spacing:-1px;box-shadow:0 4px 16px rgba(36,174,82,.3)">AM</div>
         <div style="position:absolute;bottom:0;right:0;width:22px;height:22px;background:var(--white);border:2px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:var(--s1)">
           <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="var(--ink3)" stroke-width="2.2"><path d="M14 3l3 3-10 10H4v-3L14 3z" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
@@ -17675,7 +17665,7 @@ function renderSettingsOrg(el){
 function renderSettingsSecurity(el){
   el.innerHTML = `
     <!-- Security score banner -->
-    <div style="background:linear-gradient(135deg,var(--gr) 0%,#007A4D 100%);border-radius:var(--r2);padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;gap:18px;color:white">
+    <div style="background:var(--gr);border-radius:var(--r2);padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;gap:18px;color:white">
       <div style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.2);border:3px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <div style="text-align:center"><div style="font-size:20px;font-weight:800">A+</div></div>
       </div>
@@ -18504,7 +18494,7 @@ function popiaTab(t){
 
   if(t==='overview'){
     el.innerHTML=`
-      <div style="background:linear-gradient(135deg,#00285D 0%,#003d85 100%);border-radius:var(--r2);padding:18px 22px;margin-bottom:18px;color:white;display:flex;align-items:center;gap:18px">
+      <div style="background:#00285D;border-radius:var(--r2);padding:18px 22px;margin-bottom:18px;color:white;display:flex;align-items:center;gap:18px">
         <div style="width:56px;height:56px;border-radius:12px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
           <svg width="26" height="26" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.8"><path d="M10 2L3 5v5c0 5 3.5 8.5 7 10 3.5-1.5 7-5 7-10V5L10 2z"/><path d="M7 10l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
@@ -23708,7 +23698,7 @@ function buildAIPanel(){
     <div id="aiPanelInner">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--glass-border-light2);flex-shrink:0">
         <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:28px;height:28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:8px;display:flex;align-items:center;justify-content:center">
+          <div style="width:28px;height:28px;background:var(--pur);border-radius:8px;display:flex;align-items:center;justify-content:center">
             <svg width="14" height="14" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="20" fill="#F05A00"/><g transform="translate(20,20)"><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(0)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(51.4)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(102.9)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(154.3)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(205.7)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(257.1)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(308.6)"/></g></svg>
           </div>
           <div>
@@ -23742,7 +23732,7 @@ function buildAIPanel(){
             style="flex:1;min-height:36px;max-height:120px;resize:none;padding:8px 12px;font-family:var(--font);font-size:13px;background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.8);border-radius:10px;color:var(--ink);outline:none;backdrop-filter:blur(8px)"
             onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAIFromInput()}"></textarea>
           <button onclick="sendAIFromInput()" id="aiSendBtn"
-            style="width:36px;height:36px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(124,58,237,.4)">
+            style="width:36px;height:36px;background:var(--pur);border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(124,58,237,.4)">
             <svg width="14" height="14" viewBox="0 0 20 20" fill="white"><path d="M2 10L18 2 10 18l-2-5-6-3z"/></svg>
           </button>
         </div>
@@ -23859,7 +23849,7 @@ setTimeout(()=>{
     btn.setAttribute('onclick','toggleAI()');
     btn.setAttribute('title','BipraPay Assistant — powered by Claude');
     btn.innerHTML = `
-      <div style="width:20px;height:20px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <div style="width:20px;height:20px;background:var(--pur);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="10" height="10" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="20" fill="#F05A00"/><g transform="translate(20,20)"><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(0)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(51.4)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(102.9)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(154.3)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(205.7)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(257.1)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(308.6)"/></g></svg>
       </div>
       <span style="font-size:12px;font-weight:600">Ask Claude</span>`;
@@ -24447,8 +24437,7 @@ window.downloadOpenAPISpec = function(){
 function buildDevPortal(el){
   el.innerHTML=`
     <!-- Hero -->
-    <div style="background:linear-gradient(135deg,#0f1a10 0%,#0c1a2e 100%);border-radius:var(--r3);padding:36px 40px;margin-bottom:20px;position:relative;overflow:hidden">
-      <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 80% 50%,rgba(36,174,82,.15) 0%,transparent 70%);pointer-events:none"></div>
+    <div style="background:#0d1a17;border-radius:var(--r3);padding:36px 40px;margin-bottom:20px;position:relative;overflow:hidden">
       <div style="position:relative;z-index:1">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
           <div style="width:40px;height:40px;background:var(--brand);border-radius:12px;display:flex;align-items:center;justify-content:center">
@@ -25141,8 +25130,7 @@ window.renderDashboard = function(){
   // ── REALTIME — PayShap + Capitec Pay ─────────────────────────
   function buildSaRealtime(el){
     el.innerHTML=`
-      <div style="background:linear-gradient(135deg,#004B87,#0072C6);border-radius:var(--r3);padding:22px 28px;margin-bottom:20px;color:white;position:relative;overflow:hidden">
-        <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 100% at 90% 50%,rgba(255,255,255,.08) 0%,transparent 70%);pointer-events:none"></div>
+      <div style="background:#0072C6;border-radius:var(--r3);padding:22px 28px;margin-bottom:20px;color:white;position:relative;overflow:hidden">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
           <div style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700">PayShap</div>
           <div style="font-size:16px;font-weight:800;letter-spacing:-.3px">SARB Real-Time Payment Rail</div>
@@ -25738,33 +25726,24 @@ session.onpaymentauthorized = (e) => {
 
 /* ── Dark mode brand adjustments ── */
 html.dark body {
-  background: linear-gradient(
-    -45deg,
-    #1a0800, #180c04, #140608,
-    #120a18, #1a0a04, #100808
-  ) !important;
-  background-size: 400% 400% !important;
+  background: var(--mesh-dark) !important;
 }
-html.dark body::before {
-  background:
-    radial-gradient(ellipse 80% 60% at 10% 15%, rgba(240,90,0,0.20)  0%, transparent 60%),
-    radial-gradient(ellipse 60% 70% at 90% 80%, rgba(0,71,255,0.10)  0%, transparent 60%),
-    radial-gradient(ellipse 80% 50% at 55%  5%, rgba(109,40,217,0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 55% 75% at 78% 32%, rgba(240,90,0,0.10)  0%, transparent 55%),
-    radial-gradient(ellipse 65% 45% at 22% 72%, rgba(200,90,0,0.12)  0%, transparent 55%),
-    radial-gradient(ellipse 45% 60% at 48% 58%, rgba(240,120,0,0.08) 0%, transparent 50%) !important;
-}
-
-/* ── Stat card animated top borders — brand orange variants ── */
-.stat.green::after { background: linear-gradient(90deg, var(--gr), #00c47a, #00e88d, var(--gr)) !important; }
 
 </style>
-<style id="biprapay-no-glass">
+<style id="biprapay-liquid-glass">
 
 /* ════════════════════════════════════════════════════════════
-   NO-GLASS CANONICAL — v15.9f
-   All surfaces solid. Clean. Professional.
+   LIQUID GLASS CANONICAL — v16.0
+   Every surface is translucent + blurred. No gradients anywhere —
+   depth and colour come from the blurred solid-colour .bg-orbs
+   layer showing through, not from gradient fills.
 ════════════════════════════════════════════════════════════ */
+
+:root{
+  --glass-blur: blur(22px) saturate(1.7);
+  --glass-blur-sm: blur(14px) saturate(1.5);
+  --glass-blur-lg: blur(34px) saturate(1.9);
+}
 
 /* ── Body ── */
 body {
@@ -25774,18 +25753,18 @@ body {
 
 /* ── Cards ── */
 .card {
-  background: var(--white) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: 0 1px 3px rgba(11,15,26,.06), 0 1px 8px rgba(11,15,26,.04) !important;
-  transition: box-shadow .18s ease, transform .18s ease !important;
+  background: rgba(255,255,255,.5) !important;
+  border: 1px solid rgba(255,255,255,.5) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 1px 3px rgba(11,15,26,.06), 0 1px 8px rgba(11,15,26,.04) !important;
+  transition: box-shadow .18s ease, transform .18s ease, background .18s ease !important;
   overflow: visible !important;
 }
 .card:hover {
-  background: var(--white) !important;
-  border-color: var(--border2) !important;
-  box-shadow: 0 4px 16px rgba(11,15,26,.09), 0 1px 4px rgba(11,15,26,.06) !important;
+  background: rgba(255,255,255,.72) !important;
+  border-color: rgba(255,255,255,.65) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 4px 16px rgba(11,15,26,.09), 0 1px 4px rgba(11,15,26,.06) !important;
   transform: translateY(-1px) !important;
 }
 .card::before { display: none !important; }
@@ -25794,20 +25773,20 @@ body {
 
 /* ── Stat cards ── */
 .stat {
-  background: var(--white) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: 0 1px 3px rgba(11,15,26,.05) !important;
+  background: rgba(255,255,255,.45) !important;
+  border: 1px solid rgba(255,255,255,.5) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 1px 3px rgba(11,15,26,.05) !important;
   overflow: visible !important;
 }
 .stat:hover {
-  box-shadow: 0 3px 12px rgba(11,15,26,.08) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 3px 12px rgba(11,15,26,.08) !important;
   transform: translateY(-1px) !important;
-  background: var(--white) !important;
+  background: rgba(255,255,255,.68) !important;
 }
 .stat::before { display: none !important; }
-/* Solid top borders (no iridescent animation) */
+/* Solid top borders (no gradient) */
 .stat.green  { border-top: 3px solid var(--gr)  !important; background-image: none !important; animation: none !important; }
 .stat.blue   { border-top: 3px solid var(--cp)  !important; background-image: none !important; animation: none !important; }
 .stat.amber  { border-top: 3px solid var(--amb) !important; background-image: none !important; animation: none !important; }
@@ -25817,221 +25796,225 @@ body {
 
 /* ── Header ── */
 header {
-  background: var(--white) !important;
-  border-bottom: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: 0 1px 0 var(--border), 0 2px 8px rgba(11,15,26,.04) !important;
+  background: rgba(255,255,255,.58) !important;
+  border-bottom: 1px solid rgba(255,255,255,.5) !important;
+  backdrop-filter: var(--glass-blur-lg) !important;
+  -webkit-backdrop-filter: var(--glass-blur-lg) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.6), 0 2px 8px rgba(11,15,26,.04) !important;
 }
 header::after { display: none !important; }
 .hdr-nav {
-  background: var(--bg) !important;
-  border-top: 1px solid var(--border) !important;
+  background: rgba(247,248,251,.55) !important;
+  border-top: 1px solid rgba(255,255,255,.4) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
 }
 .page-hdr {
-  background: var(--white) !important;
-  border-bottom: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: 0 1px 0 var(--border) !important;
+  background: rgba(255,255,255,.55) !important;
+  border-bottom: 1px solid rgba(255,255,255,.45) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.5) !important;
 }
 
 /* ── Flyout ── */
 .sb-flyout {
-  background: var(--white) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: 0 8px 32px rgba(11,15,26,.12), 0 2px 8px rgba(11,15,26,.07) !important;
+  background: rgba(255,255,255,.72) !important;
+  border: 1px solid rgba(255,255,255,.55) !important;
+  backdrop-filter: var(--glass-blur-lg) !important;
+  -webkit-backdrop-filter: var(--glass-blur-lg) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 8px 32px rgba(11,15,26,.14), 0 2px 8px rgba(11,15,26,.08) !important;
 }
 
 /* ── Modal ── */
 .modal-ov {
-  background: rgba(11,15,26,.45) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: rgba(11,15,26,.32) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
 }
 .modal {
-  background: var(--white) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: 0 20px 60px rgba(11,15,26,.18), 0 4px 16px rgba(11,15,26,.10) !important;
+  background: rgba(255,255,255,.78) !important;
+  border: 1px solid rgba(255,255,255,.6) !important;
+  backdrop-filter: var(--glass-blur-lg) !important;
+  -webkit-backdrop-filter: var(--glass-blur-lg) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 20px 60px rgba(11,15,26,.20), 0 4px 16px rgba(11,15,26,.10) !important;
 }
 .modal::before { display: none !important; }
 
 /* ── Tab row ── */
 .tab-row {
-  background: var(--bg) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: rgba(240,242,247,.55) !important;
+  border: 1px solid rgba(255,255,255,.4) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
   box-shadow: none !important;
 }
 .tab-row .tab.active {
-  background: var(--white) !important;
+  background: rgba(255,255,255,.8) !important;
   box-shadow: 0 1px 4px rgba(11,15,26,.08) !important;
 }
 
 /* ── Tables ── */
 .tbl-wrap {
-  background: var(--white) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: rgba(255,255,255,.6) !important;
+  border: 1px solid rgba(255,255,255,.45) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
   box-shadow: 0 1px 4px rgba(11,15,26,.04) !important;
 }
 .tbl-wrap th {
-  background: var(--bg) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: rgba(247,248,251,.7) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
 }
-.tbl-wrap tr:hover td { background: var(--bg) !important; }
+.tbl-wrap tr:hover td { background: rgba(240,242,247,.7) !important; }
 
 /* ── Form inputs ── */
 .form-input {
-  background: var(--white) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: rgba(255,255,255,.55) !important;
+  border: 1px solid rgba(255,255,255,.55) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
   box-shadow: none !important;
 }
 .form-input:focus {
-  background: var(--white) !important;
+  background: rgba(255,255,255,.85) !important;
   border-color: var(--brand) !important;
   box-shadow: 0 0 0 3px rgba(240,90,0,0.16) !important;
 }
 .auth-input {
-  background: var(--white) !important;
-  border: 1.5px solid var(--border) !important;
-  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  background: rgba(255,255,255,.6) !important;
+  border: 1.5px solid rgba(255,255,255,.6) !important;
+  backdrop-filter: var(--glass-blur-sm) !important; -webkit-backdrop-filter: var(--glass-blur-sm) !important;
   box-shadow: none !important;
 }
 .auth-input:focus {
-  background: var(--white) !important;
+  background: rgba(255,255,255,.85) !important;
   border-color: var(--brand) !important;
   box-shadow: 0 0 0 3px rgba(240,90,0,0.16) !important;
 }
 .auth-otp-input {
-  background: var(--white) !important;
-  border: 1.5px solid var(--border) !important;
-  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  background: rgba(255,255,255,.6) !important;
+  border: 1.5px solid rgba(255,255,255,.6) !important;
+  backdrop-filter: var(--glass-blur-sm) !important; -webkit-backdrop-filter: var(--glass-blur-sm) !important;
 }
 
 /* ── Buttons ── */
 .btn-ghost {
-  background: var(--white) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: rgba(255,255,255,.55) !important;
+  border: 1px solid rgba(255,255,255,.55) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
   box-shadow: 0 1px 2px rgba(11,15,26,.05) !important;
 }
 .btn-ghost:hover {
-  background: var(--bg2) !important;
-  border-color: var(--border2) !important;
+  background: rgba(255,255,255,.75) !important;
+  border-color: rgba(255,255,255,.7) !important;
   transform: translateY(-1px) !important;
   box-shadow: 0 2px 6px rgba(11,15,26,.08) !important;
 }
 
 /* ── Code blocks ── */
 .code-block {
-  background: var(--bg) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: rgba(11,15,26,.04) !important;
+  border: 1px solid rgba(255,255,255,.4) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
 }
 
 /* ── Auth ── */
 .auth-gate {
-  background: var(--bg) !important;
+  background: rgba(244,238,231,.5) !important;
+  backdrop-filter: blur(2px) !important;
+  -webkit-backdrop-filter: blur(2px) !important;
   animation: none !important;
 }
 .auth-card {
-  background: var(--white) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: 0 16px 48px rgba(11,15,26,.12), 0 2px 8px rgba(11,15,26,.06) !important;
+  background: rgba(255,255,255,.7) !important;
+  border: 1px solid rgba(255,255,255,.6) !important;
+  backdrop-filter: var(--glass-blur-lg) !important;
+  -webkit-backdrop-filter: var(--glass-blur-lg) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 16px 48px rgba(11,15,26,.14), 0 2px 8px rgba(11,15,26,.06) !important;
 }
 
 /* ── AI panel ── */
 #aiPanel {
-  background: var(--white) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: 0 12px 40px rgba(11,15,26,.14) !important;
+  background: rgba(255,255,255,.7) !important;
+  border: 1px solid rgba(255,255,255,.55) !important;
+  backdrop-filter: var(--glass-blur-lg) !important;
+  -webkit-backdrop-filter: var(--glass-blur-lg) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 12px 40px rgba(11,15,26,.16) !important;
 }
 .ai-bot .ai-bubble {
-  background: var(--bg) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: rgba(247,248,251,.75) !important;
+  border: 1px solid rgba(255,255,255,.5) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
 }
 
 /* ── Toast ── */
 .toast {
-  background: var(--white) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: 0 8px 32px rgba(11,15,26,.12) !important;
+  background: rgba(255,255,255,.75) !important;
+  border: 1px solid rgba(255,255,255,.55) !important;
+  backdrop-filter: var(--glass-blur-lg) !important;
+  -webkit-backdrop-filter: var(--glass-blur-lg) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 8px 32px rgba(11,15,26,.14) !important;
 }
 
 /* ── Chart tooltip ── */
 .chart-tooltip {
-  background: var(--white) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: rgba(255,255,255,.85) !important;
+  border: 1px solid rgba(255,255,255,.6) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
   box-shadow: 0 4px 16px rgba(11,15,26,.10) !important;
 }
 
 /* ── Misc ── */
-.wa-window    { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: var(--white) !important; }
+.wa-window    { backdrop-filter: var(--glass-blur) !important; -webkit-backdrop-filter: var(--glass-blur) !important; background: rgba(255,255,255,.65) !important; }
 .terminal-frame { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 .progress-bar-wrap { background: var(--bg2) !important; }
 .hdr-kbd-btn {
-  background: var(--bg) !important;
-  border: 1px solid var(--border) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: rgba(255,255,255,.5) !important;
+  border: 1px solid rgba(255,255,255,.5) !important;
+  backdrop-filter: var(--glass-blur-sm) !important;
+  -webkit-backdrop-filter: var(--glass-blur-sm) !important;
 }
-.hdr-kbd-btn:hover { background: var(--bg2) !important; }
+.hdr-kbd-btn:hover { background: rgba(255,255,255,.7) !important; }
 .badge { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-.hdr-chip { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-.nav-item:hover { background: var(--bg2) !important; transform: none !important; }
-.nav-item.active { background: var(--bg2) !important; }
-.tnav-btn:hover { background: var(--bg2) !important; }
+.hdr-chip { backdrop-filter: var(--glass-blur-sm) !important; -webkit-backdrop-filter: var(--glass-blur-sm) !important; }
+.nav-item:hover { background: rgba(255,255,255,.5) !important; transform: none !important; }
+.nav-item.active { background: rgba(255,255,255,.6) !important; }
+.tnav-btn:hover { background: rgba(255,255,255,.5) !important; }
 
-/* ── Dark mode — solid surfaces ── */
-html.dark body { background: var(--bg) !important; animation: none !important; }
-html.dark header    { background: var(--white) !important; }
-html.dark .hdr-nav  { background: var(--bg) !important; }
-html.dark .page-hdr { background: var(--white) !important; }
-html.dark .card     { background: var(--white) !important; border-color: var(--border) !important; }
-html.dark .card:hover { background: var(--bg2) !important; }
-html.dark .stat     { background: var(--white) !important; border-color: var(--border) !important; }
-html.dark .sb-flyout { background: var(--white) !important; border-color: var(--border) !important; }
-html.dark .modal    { background: var(--white) !important; border-color: var(--border) !important; }
-html.dark .modal-ov { background: rgba(0,0,0,0.60) !important; }
-html.dark .tab-row  { background: var(--bg) !important; border-color: var(--border) !important; }
-html.dark .tab-row .tab.active { background: var(--bg2) !important; }
-html.dark .tbl-wrap { background: var(--white) !important; border-color: var(--border) !important; }
-html.dark .tbl-wrap th { background: var(--bg) !important; }
-html.dark .tbl-wrap tr:hover td { background: var(--bg2) !important; }
-html.dark .btn-ghost { background: var(--bg2) !important; border-color: var(--border) !important; }
-html.dark .btn-ghost:hover { background: var(--bg3) !important; }
-html.dark .form-input  { background: var(--bg2) !important; border-color: var(--border) !important; }
-html.dark .form-input:focus { background: var(--bg) !important; }
-html.dark .auth-input  { background: var(--bg2) !important; border-color: var(--border) !important; }
-html.dark .code-block  { background: var(--bg) !important; border-color: var(--border) !important; }
-html.dark .toast       { background: var(--white) !important; border-color: var(--border) !important; }
-html.dark .auth-gate   { background: var(--bg) !important; }
-html.dark .auth-card   { background: var(--white) !important; border-color: var(--border) !important; }
-html.dark #aiPanel     { background: var(--white) !important; border-color: var(--border) !important; }
-html.dark .ai-bot .ai-bubble { background: var(--bg2) !important; border-color: var(--border) !important; }
-html.dark .chart-tooltip { background: var(--white) !important; border-color: var(--border) !important; }
+/* ── Dark mode — glass surfaces ── */
+html.dark body { background: var(--mesh-dark) !important; animation: none !important; }
+html.dark header    { background: rgba(26,29,46,.62) !important; border-bottom-color: rgba(255,255,255,.08) !important; }
+html.dark .hdr-nav  { background: rgba(18,20,32,.5) !important; border-top-color: rgba(255,255,255,.06) !important; }
+html.dark .page-hdr { background: rgba(26,29,46,.5) !important; border-bottom-color: rgba(255,255,255,.08) !important; }
+html.dark .card     { background: rgba(26,29,46,.62) !important; border-color: rgba(255,255,255,.09) !important; }
+html.dark .card:hover { background: rgba(32,36,54,.72) !important; }
+html.dark .stat     { background: rgba(26,29,46,.6) !important; border-color: rgba(255,255,255,.08) !important; }
+html.dark .sb-flyout { background: rgba(26,29,46,.72) !important; border-color: rgba(255,255,255,.1) !important; }
+html.dark .modal    { background: rgba(26,29,46,.78) !important; border-color: rgba(255,255,255,.12) !important; }
+html.dark .modal-ov { background: rgba(0,0,0,.5) !important; }
+html.dark .tab-row  { background: rgba(18,20,32,.5) !important; border-color: rgba(255,255,255,.07) !important; }
+html.dark .tab-row .tab.active { background: rgba(40,44,64,.8) !important; }
+html.dark .tbl-wrap { background: rgba(26,29,46,.6) !important; border-color: rgba(255,255,255,.08) !important; }
+html.dark .tbl-wrap th { background: rgba(18,20,32,.7) !important; }
+html.dark .tbl-wrap tr:hover td { background: rgba(40,44,64,.6) !important; }
+html.dark .btn-ghost { background: rgba(40,44,64,.55) !important; border-color: rgba(255,255,255,.1) !important; }
+html.dark .btn-ghost:hover { background: rgba(48,52,74,.7) !important; }
+html.dark .form-input  { background: rgba(30,34,53,.6) !important; border-color: rgba(255,255,255,.1) !important; }
+html.dark .form-input:focus { background: rgba(30,34,53,.85) !important; }
+html.dark .auth-input  { background: rgba(30,34,53,.6) !important; border-color: rgba(255,255,255,.1) !important; }
+html.dark .code-block  { background: rgba(0,0,0,.2) !important; border-color: rgba(255,255,255,.08) !important; }
+html.dark .toast       { background: rgba(26,29,46,.78) !important; border-color: rgba(255,255,255,.1) !important; }
+html.dark .auth-gate   { background: rgba(21,12,10,.5) !important; }
+html.dark .auth-card   { background: rgba(30,34,53,.72) !important; border-color: rgba(255,255,255,.1) !important; }
+html.dark #aiPanel     { background: rgba(30,34,53,.75) !important; border-color: rgba(255,255,255,.1) !important; }
+html.dark .ai-bot .ai-bubble { background: rgba(40,44,64,.7) !important; border-color: rgba(255,255,255,.08) !important; }
+html.dark .chart-tooltip { background: rgba(30,34,53,.85) !important; border-color: rgba(255,255,255,.1) !important; }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
