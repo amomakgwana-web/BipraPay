@@ -6652,8 +6652,9 @@ html.dark .hdr-ai-btn {
           </div>
           <div class="form-group"><label class="form-label">Merchant</label>
             <select class="form-input" id="piMerchant">
-              <option value="MRC-00142">MRC-00142 — Sipho's Store</option>
-              <option value="MRC-00141">MRC-00141 — TechBuild Ltd</option>
+              <option value="MRC-00142">MRC-00142 — Sipho's Electronics</option>
+              <option value="MRC-00141">MRC-00141 — Cape Town Eats</option>
+              <option value="MRC-00140">MRC-00140 — Zanele Fashion</option>
             </select>
           </div>
           <button class="btn btn-primary btn-sm" style="width:100%" onclick="startPaymentFlow()">
@@ -11324,13 +11325,15 @@ const AUDIT_EVENTS = [
   {user:'SYSTEM',action:'AUTH_FAILED',resource:'login · Unknown IP 185.220.x.x',severity:'high',ip:'185.220.x.x',time:'2026-05-04 12:40'},
   {user:'SYSTEM',action:'AUTH_FAILED',resource:'login · 185.100.x.x',severity:'high',ip:'185.100.x.x',time:'2026-05-04 11:30'},
 ];
+let _auditLive = null; // null = showing demo fallback; array = real Supabase rows
 function renderAuditLog(){
   const el=document.getElementById('auditContent'); if(!el)return;
+  const events = _auditLive || AUDIT_EVENTS;
   const sevColor={high:'var(--red)',medium:'var(--amb)',low:'var(--gr)'};
   const sevBg={high:'var(--red-bg)',medium:'var(--amb-bg)',low:'var(--gr-bg)'};
   el.innerHTML=`<div class="tbl-wrap"><table>
     <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Resource</th><th>Severity</th><th>IP</th></tr></thead>
-    <tbody>${AUDIT_EVENTS.map(e=>`<tr>
+    <tbody>${events.map(e=>`<tr>
       <td style="font-family:var(--mono);font-size:11px;color:var(--ink4);white-space:nowrap">${e.time}</td>
       <td style="font-weight:600;font-size:12px">${e.user}</td>
       <td><span style="font-family:var(--mono);font-size:10.5px;font-weight:700;background:var(--bg2);padding:2px 6px;border-radius:4px;color:var(--ink2)">${e.action}</span></td>
@@ -20116,6 +20119,11 @@ async function loadLiveData(){
     if(typeof renderRefunds==='function') renderRefunds();
   }catch(e){ console.error('[BipraPay] Failed to load refunds from Supabase',e); }
 
+  try{
+    _auditLive = await db.fetchAuditLog();
+    if(typeof renderAuditLog==='function') renderAuditLog();
+  }catch(e){ console.error('[BipraPay] Failed to load audit log from Supabase',e); }
+
   if(_liveSynced) return; // subscriptions already active from a previous login in this tab
   _liveSynced = true;
   db.subscribeTransactions(t=>{
@@ -20128,6 +20136,11 @@ async function loadLiveData(){
     if(REFUNDS_DATA.some(x=>x.ref===r.ref)) return;
     REFUNDS_DATA.unshift(r);
     if(typeof renderRefunds==='function') renderRefunds();
+  });
+  db.subscribeAuditLog(e=>{
+    if(!_auditLive) _auditLive = [];
+    _auditLive.unshift(e);
+    if(typeof renderAuditLog==='function') renderAuditLog();
   });
 }
 

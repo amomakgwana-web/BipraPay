@@ -25,7 +25,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const { card, amount, merchant, channel } = body ?? {};
+  const { card, amount, merchant, channel, idempotencyKey } = body ?? {};
   const cardDigits = String(card ?? '').replace(/\s/g, '');
   if (cardDigits.length < 8 || !/^\d+$/.test(cardDigits)) {
     return json({ error: 'Invalid card number' }, 400);
@@ -44,6 +44,33 @@ Deno.serve(async (req: Request) => {
   const { data: { user } } = await userClient.auth.getUser();
   if (!user) return json({ error: 'Not authenticated' }, 401);
 
+  const admin = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  );
+
+  const idemKey = typeof idempotencyKey === 'string' && idempotencyKey.length > 0 ? idempotencyKey : null;
+  if (idemKey) {
+    const { data: existing } = await admin
+      .from('idempotency_keys')
+      .select('status_code, response_body')
+      .eq('key', idemKey)
+      .eq('endpoint', 'process-payment')
+      .maybeSingle();
+    if (existing) return json(existing.response_body, existing.status_code);
+  }
+
+  const merchantId = merchant || 'MRC-00142';
+  const { data: merchantRow } = await admin
+    .from('merchants')
+    .select('id, status')
+    .eq('id', merchantId)
+    .maybeSingle();
+  if (!merchantRow) return json({ error: `Unknown merchant ${merchantId}` }, 400);
+  if (merchantRow.status !== 'active') {
+    return json({ error: `Merchant ${merchantId} is ${merchantRow.status}, cannot accept payments` }, 400);
+  }
+
   const type = TYPE_MAP[channel] ?? 'CNP';
   const method = METHOD_MAP[channel] ?? channel ?? 'Card';
 
@@ -51,11 +78,6 @@ Deno.serve(async (req: Request) => {
   const risk = Math.min(97, Math.max(1, Math.round(8 + Math.random() * 25 + (amt > 10000 ? 15 : 0))));
   const status = risk > 85 ? 'declined' : 'approved';
   const ref = `SPY-${String(channel ?? 'CNP').replace(/\s/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-  const admin = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
 
   const { data, error } = await admin
     .from('transactions')
@@ -69,7 +91,7 @@ Deno.serve(async (req: Request) => {
       risk_score: risk,
       status,
       channel: String(channel ?? '').toLowerCase(),
-      merchant_id: merchant || 'MRC-00142',
+      merchant_id: merchantId,
       created_by: user.id,
     })
     .select()
@@ -77,12 +99,33 @@ Deno.serve(async (req: Request) => {
 
   if (error) return json({ error: error.message }, 500);
 
-  return json({
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  await admin.from('audit_log').insert({
+    actor_id: user.id,
+    action: 'payment.created',
+    entity_type: 'transaction',
+    entity_id: data.ref,
+    metadata: { amount: amt, status: data.status, risk: data.risk_score, channel, merchant_id: merchantId, ip },
+  });
+
+  const responseBody = {
     ref: data.ref,
     status: data.status,
     risk: data.risk_score,
     amount: amt,
     authCode: String(Math.floor(100000 + Math.random() * 900000)),
     approved: status === 'approved',
-  });
+  };
+
+  if (idemKey) {
+    await admin.from('idempotency_keys').insert({
+      key: idemKey,
+      endpoint: 'process-payment',
+      status_code: 200,
+      response_body: responseBody,
+      created_by: user.id,
+    });
+  }
+
+  return json(responseBody);
 });

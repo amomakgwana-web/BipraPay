@@ -46,6 +46,20 @@ function mapRefundRow(row) {
   };
 }
 
+function mapAuditRow(row) {
+  const amount = row.metadata?.amount;
+  const resource = amount != null ? `${row.entity_id} · R ${Number(amount).toFixed(2)}` : row.entity_id;
+  const severity = ['declined', 'pending_4eyes'].includes(row.metadata?.status) ? 'high' : 'low';
+  return {
+    user: row.actor?.name || 'System',
+    action: row.action.replace(/\./g, '_').toUpperCase(),
+    resource,
+    severity,
+    ip: row.metadata?.ip || 'unknown',
+    time: new Date(row.created_at).toLocaleString('en-ZA', { hour12: false }),
+  };
+}
+
 async function fetchTransactions(limit = 200) {
   const { data, error } = await supabase
     .from('transactions')
@@ -66,6 +80,25 @@ async function fetchRefunds(limit = 100) {
   return data.map(mapRefundRow);
 }
 
+async function fetchAuditLog(limit = 100) {
+  const { data, error } = await supabase
+    .from('audit_log')
+    .select('*, actor:profiles(name)')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data.map(mapAuditRow);
+}
+
+async function fetchMerchants() {
+  const { data, error } = await supabase
+    .from('merchants')
+    .select('*')
+    .order('name');
+  if (error) throw error;
+  return data;
+}
+
 function subscribeTransactions(onInsert) {
   return supabase
     .channel('public:transactions')
@@ -80,6 +113,22 @@ function subscribeRefunds(onInsert) {
     .channel('public:refunds')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'refunds' }, (payload) => {
       onInsert(mapRefundRow(payload.new));
+    })
+    .subscribe();
+}
+
+function subscribeAuditLog(onInsert) {
+  return supabase
+    .channel('public:audit_log')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'audit_log' }, async (payload) => {
+      // The realtime payload doesn't include the joined profile name; look it up.
+      const row = payload.new;
+      let actorName = 'System';
+      if (row.actor_id) {
+        const { data } = await supabase.from('profiles').select('name').eq('id', row.actor_id).maybeSingle();
+        if (data) actorName = data.name;
+      }
+      onInsert(mapAuditRow({ ...row, actor: { name: actorName } }));
     })
     .subscribe();
 }
@@ -122,14 +171,20 @@ async function signOut() {
 
 // ── Payment / refund processing (server-side via Edge Functions) ─
 
+function newIdempotencyKey() {
+  return crypto.randomUUID();
+}
+
 async function createPayment(payload) {
-  const { data, error } = await supabase.functions.invoke('process-payment', { body: payload });
+  const body = { idempotencyKey: newIdempotencyKey(), ...payload };
+  const { data, error } = await supabase.functions.invoke('process-payment', { body });
   if (error) throw error;
   return data;
 }
 
 async function createRefund(payload) {
-  const { data, error } = await supabase.functions.invoke('process-refund', { body: payload });
+  const body = { idempotencyKey: newIdempotencyKey(), ...payload };
+  const { data, error } = await supabase.functions.invoke('process-refund', { body });
   if (error) throw error;
   return data;
 }
@@ -138,8 +193,11 @@ window.SP_DB = {
   supabase,
   fetchTransactions,
   fetchRefunds,
+  fetchAuditLog,
+  fetchMerchants,
   subscribeTransactions,
   subscribeRefunds,
+  subscribeAuditLog,
   signIn,
   listMfaFactors,
   challengeMfa,

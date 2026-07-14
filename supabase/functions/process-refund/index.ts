@@ -19,7 +19,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const { transactionRef, amount, reason } = body ?? {};
+  const { transactionRef, amount, reason, idempotencyKey } = body ?? {};
   if (!transactionRef || typeof transactionRef !== 'string') {
     return json({ error: 'transactionRef is required' }, 400);
   }
@@ -37,6 +37,17 @@ Deno.serve(async (req: Request) => {
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
+
+  const idemKey = typeof idempotencyKey === 'string' && idempotencyKey.length > 0 ? idempotencyKey : null;
+  if (idemKey) {
+    const { data: existing } = await admin
+      .from('idempotency_keys')
+      .select('status_code, response_body')
+      .eq('key', idemKey)
+      .eq('endpoint', 'process-refund')
+      .maybeSingle();
+    if (existing) return json(existing.response_body, existing.status_code);
+  }
 
   const { data: txn, error: txnError } = await admin
     .from('transactions')
@@ -78,12 +89,33 @@ Deno.serve(async (req: Request) => {
 
   if (error) return json({ error: error.message }, 500);
 
-  return json({
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  await admin.from('audit_log').insert({
+    actor_id: user.id,
+    action: 'refund.created',
+    entity_type: 'refund',
+    entity_id: data.ref,
+    metadata: { transaction_ref: txn.ref, amount: requestedCents / 100, type, status: data.status, reason: data.reason, ip },
+  });
+
+  const responseBody = {
     ref: data.ref,
     orig: data.transaction_ref,
     type: data.type,
     amount: requestedCents / 100,
     reason: data.reason,
     status: data.status,
-  });
+  };
+
+  if (idemKey) {
+    await admin.from('idempotency_keys').insert({
+      key: idemKey,
+      endpoint: 'process-refund',
+      status_code: 200,
+      response_body: responseBody,
+      created_by: user.id,
+    });
+  }
+
+  return json(responseBody);
 });
