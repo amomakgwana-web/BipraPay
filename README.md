@@ -17,8 +17,8 @@ initiator (server-side risk scoring via an Edge Function), and refunds
 pages are still mock data and are being wired up incrementally.
 
 Demo staff logins (seeded in `supabase/seed.sql`):
-- `ananya@biprapay.co.za` / `Demo2026!` — Super Admin
-- `sipho@biprapay.co.za` / `Admin123!` — Payments Ops
+- `ananya@biprapay.com` / `Demo2026!` — Super Admin
+- `sipho@biprapay.com` / `Admin123!` — Payments Ops
 
 ## Development
 

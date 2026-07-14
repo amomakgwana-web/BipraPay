@@ -5146,7 +5146,7 @@ html.dark .hdr-ai-btn {
   currency: <span class="cs">"ZAR"</span>,
   reason: <span class="cs">"customer_request"</span>,
   merchantId: <span class="cs">"MRC-00142"</span>,
-  notifyUrl: <span class="cs">"https://api.biprapay.co.za/trasfund/callback"</span>,
+  notifyUrl: <span class="cs">"https://api.biprapay.com/trasfund/callback"</span>,
   sqsQueue: <span class="cs">"biprapay-refunds.fifo"</span>,     <span class="cc">// async result via SQS</span>
   snsTopicArn: <span class="cs">"arn:aws:sns:af-south-1:...:biprapay-refund-results"</span>
 });
@@ -5604,7 +5604,7 @@ html.dark .hdr-ai-btn {
   <div class="page-hdr">
     <div><div class="ph-title">System Status</div><div class="ph-sub">Real-time service health · 90-day uptime · Incident history</div></div>
     <div class="ph-actions">
-      <a href="#" style="font-size:12px;color:var(--brand);text-decoration:none">status.biprapay.co.za ↗</a>
+      <a href="#" style="font-size:12px;color:var(--brand);text-decoration:none">status.biprapay.com ↗</a>
     </div>
   </div>
   <div class="pad" id="statusPageContent"></div>
@@ -5702,7 +5702,7 @@ html.dark .hdr-ai-btn {
   <div class="modal" style="width:440px">
     <div class="modal-hdr"><h3>Send Test Email via SES</h3><button class="close-x" aria-label="Close" onclick="closeModal('sesTestModal')"><svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4l12 12M16 4L4 16" stroke-linecap="round"/></svg></button></div>
     <div class="modal-body">
-      <div class="form-group"><label class="form-label">From Address</label><select class="form-input"><option>noreply@biprapay.co.za</option><option>payments@biprapay.co.za</option><option>alerts@biprapay.co.za</option></select></div>
+      <div class="form-group"><label class="form-label">From Address</label><select class="form-input"><option>noreply@biprapay.com</option><option>payments@biprapay.com</option><option>alerts@biprapay.com</option></select></div>
       <div class="form-group"><label class="form-label">To Address</label><input class="form-input" type="email" placeholder="test@example.co.za"></div>
       <div class="form-group"><label class="form-label">Template</label><select class="form-input"><option>payment_receipt_za</option><option>payment_failed_za</option><option>refund_confirmed_za</option><option>fraud_alert_za</option></select></div>
       <div class="form-group"><label class="form-label">Configuration Set</label><select class="form-input"><option>biprapay-transactional</option><option>biprapay-alerts</option></select></div>
@@ -6014,7 +6014,7 @@ html.dark .hdr-ai-btn {
     <div class="modal-hdr"><h3>Create Cognito User</h3><button class="close-x" aria-label="Close" onclick="closeModal('cognitoUserModal')"><svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4l12 12M16 4L4 16" stroke-linecap="round"/></svg></button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">User Pool</label><select class="form-input"><option>biprapay-operators</option><option>biprapay-merchants</option></select></div>
-      <div class="form-group"><label class="form-label">Email (Username)</label><input class="form-input" type="email" placeholder="user@biprapay.co.za"></div>
+      <div class="form-group"><label class="form-label">Email (Username)</label><input class="form-input" type="email" placeholder="user@biprapay.com"></div>
       <div class="form-group"><label class="form-label">Temporary Password</label><input class="form-input" type="password" placeholder="Auto-generate"></div>
       <div class="form-group"><label class="form-label">Force password change on first login</label>
         <div class="toggle-wrap" style="margin-top:4px"><div class="toggle on green" onclick="this.classList.toggle('on')"></div><span class="toggle-label" style="font-size:12px">Require password change</span></div>
@@ -6836,7 +6836,7 @@ html.dark .hdr-ai-btn {
     <div class="modal-body">
       <div class="form-group"><label class="form-label">TrasFund API Base URL</label><input class="form-input mono" value="https://api.trasfund.co.za/v1"></div>
       <div class="form-row"><div class="form-group"><label class="form-label">Client ID</label><input class="form-input mono" placeholder="TF-CLIENT-XXXX"></div><div class="form-group"><label class="form-label">Client Secret</label><input class="form-input mono" placeholder="••••••••" type="password"></div></div>
-      <div class="form-group"><label class="form-label">Callback URL (BipraPay receives result)</label><input class="form-input mono" value="https://api.biprapay.co.za/trasfund/callback"></div>
+      <div class="form-group"><label class="form-label">Callback URL (BipraPay receives result)</label><input class="form-input mono" value="https://api.biprapay.com/trasfund/callback"></div>
       <div class="form-group"><label class="form-label">SQS Queue for async results</label><input class="form-input mono" value="biprapay-refunds.fifo"></div>
       <div class="form-group"><label class="form-label">SNS Topic ARN for notifications</label><input class="form-input mono" value="arn:aws:sns:af-south-1:123456789:biprapay-refund-results"></div>
     </div>
@@ -7719,11 +7719,11 @@ const SQS_QUEUES=[
 ];
 
 const SNS_TOPICS=[
-  {name:'biprapay-payment-events',arn:'arn:aws:sns:af-south-1:123456789:biprapay-payment-events',subs:['HTTPS — api.mystore.co.za','SQS — biprapay-payments-prod','Email — ops@biprapay.co.za'],delivered:3842},
-  {name:'biprapay-payout-results',arn:'arn:aws:sns:af-south-1:123456789:biprapay-payout-results',subs:['HTTPS — erp.interfile.co.za','Email — finance@biprapay.co.za'],delivered:18},
-  {name:'biprapay-fraud-alerts',arn:'arn:aws:sns:af-south-1:123456789:biprapay-fraud-alerts',subs:['SMS — +27820000000','Email — security@biprapay.co.za','Slack — #fraud-alerts'],delivered:7},
+  {name:'biprapay-payment-events',arn:'arn:aws:sns:af-south-1:123456789:biprapay-payment-events',subs:['HTTPS — api.mystore.co.za','SQS — biprapay-payments-prod','Email — ops@biprapay.com'],delivered:3842},
+  {name:'biprapay-payout-results',arn:'arn:aws:sns:af-south-1:123456789:biprapay-payout-results',subs:['HTTPS — erp.interfile.co.za','Email — finance@biprapay.com'],delivered:18},
+  {name:'biprapay-fraud-alerts',arn:'arn:aws:sns:af-south-1:123456789:biprapay-fraud-alerts',subs:['SMS — +27820000000','Email — security@biprapay.com','Slack — #fraud-alerts'],delivered:7},
   {name:'biprapay-debit-results',arn:'arn:aws:sns:af-south-1:123456789:biprapay-debit-results',subs:['HTTPS — collections.interfile.co.za','SQS — biprapay-debit-results'],delivered:952},
-  {name:'biprapay-settlement-complete',arn:'arn:aws:sns:af-south-1:123456789:biprapay-settlement-complete',subs:['Email — finance@biprapay.co.za'],delivered:12},
+  {name:'biprapay-settlement-complete',arn:'arn:aws:sns:af-south-1:123456789:biprapay-settlement-complete',subs:['Email — finance@biprapay.com'],delivered:12},
   {name:'biprapay-system-alerts',arn:'arn:aws:sns:af-south-1:123456789:biprapay-system-alerts',subs:['PagerDuty','Slack — #ops-alerts'],delivered:3},
 ];
 
@@ -9280,7 +9280,7 @@ function devTab(t){
 Authorization: Bearer <span class="cs">sk_live_••••••••••••••••••</span>
 
 <span class="cc">// Node.js — with idempotency key</span>
-<span class="ck">const</span> response = <span class="ck">await</span> <span class="cf">fetch</span>(<span class="cs">'https://api.biprapay.co.za/v1/payments'</span>, {
+<span class="ck">const</span> response = <span class="ck">await</span> <span class="cf">fetch</span>(<span class="cs">'https://api.biprapay.com/v1/payments'</span>, {
   method: <span class="cs">'POST'</span>,
   headers: {
     <span class="cs">'Authorization'</span>: <span class="cs">\`Bearer \${process.env.BIPRAPAY_SECRET}\`</span>,
@@ -9377,7 +9377,7 @@ Authorization: Bearer <span class="cs">sk_live_•••••••••••
           {c:'SPY-007',h:422,m:'Amount exceeds transaction limit',r:'Check merchant configuration limits'},
           {c:'SPY-008',h:429,m:'Rate limit exceeded',r:'Throttle requests — check Retry-After header'},
           {c:'SPY-009',h:500,m:'Acquirer unavailable',r:'Auto-retry via fallback acquirer in progress'},
-          {c:'SPY-010',h:503,m:'Service degraded',r:'Check status.biprapay.co.za for updates'},
+          {c:'SPY-010',h:503,m:'Service degraded',r:'Check status.biprapay.com for updates'},
         ].map(e=>`<tr>
           <td class="mono" style="color:var(--red);font-weight:600">${e.c}</td>
           <td class="mono">${e.h}</td>
@@ -9745,7 +9745,7 @@ function analyticsTab(t){
 }
 function generateReport(e){
   const btn = e.target; btn.textContent='Generating...'; btn.disabled=true;
-  setTimeout(()=>{ btn.textContent='Generate Report'; btn.disabled=false; alert('Report queued — will be emailed to ops@biprapay.co.za'); },1500);
+  setTimeout(()=>{ btn.textContent='Generate Report'; btn.disabled=false; alert('Report queued — will be emailed to ops@biprapay.com'); },1500);
 }
 function startRtMonitor(){
   const data = Array.from({length:30},()=>Math.floor(Math.random()*60+10));
@@ -10083,7 +10083,7 @@ function mktTab(t){
     creditorAccountNumber: merchantSettlementAcc,
     reference: <span class="cs">'ORDER-7829'</span>,
     consentId: userConsentToken,  <span class="cc">// CDR consent</span>
-    notifyUrl: <span class="cs">'https://api.biprapay.co.za/a2a/callback'</span>
+    notifyUrl: <span class="cs">'https://api.biprapay.com/a2a/callback'</span>
   });
 <button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
       </div>
@@ -11195,12 +11195,12 @@ function kycTab(t){
 // P0 — USERS & RBAC
 // ══════════════════════════════════════
 const USERS_DATA = [
-  {name:'Ananya Mukherjee',email:'ananya@biprapay.co.za',role:'Super Admin',twofa:true,status:'active',last:'2026-05-05 09:28',initials:'AM',color:'var(--brand)'},
-  {name:'Sipho Dlamini',email:'sipho@biprapay.co.za',role:'Finance',twofa:true,status:'active',last:'2026-05-05 08:14',initials:'SD',color:'var(--gr)'},
-  {name:'Priya Naidoo',email:'priya@biprapay.co.za',role:'Developer',twofa:true,status:'active',last:'2026-05-04 17:42',initials:'PN',color:'var(--pur)'},
-  {name:'Thabo Khumalo',email:'thabo@biprapay.co.za',role:'Support',twofa:false,status:'active',last:'2026-05-05 07:00',initials:'TK',color:'var(--amb)'},
-  {name:'Zanele Mokoena',email:'zanele@biprapay.co.za',role:'Risk Analyst',twofa:true,status:'active',last:'2026-05-03 14:20',initials:'ZM',color:'var(--red)'},
-  {name:'Mohamed Amin',email:'mohamed@biprapay.co.za',role:'Read-Only',twofa:false,status:'invited',last:'Never',initials:'MA',color:'var(--ink4)'},
+  {name:'Ananya Mukherjee',email:'ananya@biprapay.com',role:'Super Admin',twofa:true,status:'active',last:'2026-05-05 09:28',initials:'AM',color:'var(--brand)'},
+  {name:'Sipho Dlamini',email:'sipho@biprapay.com',role:'Finance',twofa:true,status:'active',last:'2026-05-05 08:14',initials:'SD',color:'var(--gr)'},
+  {name:'Priya Naidoo',email:'priya@biprapay.com',role:'Developer',twofa:true,status:'active',last:'2026-05-04 17:42',initials:'PN',color:'var(--pur)'},
+  {name:'Thabo Khumalo',email:'thabo@biprapay.com',role:'Support',twofa:false,status:'active',last:'2026-05-05 07:00',initials:'TK',color:'var(--amb)'},
+  {name:'Zanele Mokoena',email:'zanele@biprapay.com',role:'Risk Analyst',twofa:true,status:'active',last:'2026-05-03 14:20',initials:'ZM',color:'var(--red)'},
+  {name:'Mohamed Amin',email:'mohamed@biprapay.com',role:'Read-Only',twofa:false,status:'invited',last:'Never',initials:'MA',color:'var(--ink4)'},
 ];
 const RBAC_ROLES = [
   {role:'Super Admin',desc:'Full platform access · User management · All config',perms:['transactions','refunds','settlements','merchants','risk','config','api_keys','users','audit'],count:1},
@@ -11878,7 +11878,7 @@ High-value transaction — verify with bank.
       <div class="card">
         <div class="card-hdr">Send Test Notification</div>
         <div class="form-group"><label class="form-label">Template</label><select class="form-input">${NOTIF_TEMPLATES.filter(n=>n.active).map(n=>`<option>${n.name}</option>`).join('')}</select></div>
-        <div class="form-group"><label class="form-label">Recipient Email</label><input class="form-input" placeholder="ananya@biprapay.co.za" type="email"></div>
+        <div class="form-group"><label class="form-label">Recipient Email</label><input class="form-input" placeholder="ananya@biprapay.com" type="email"></div>
         <div class="form-group"><label class="form-label">Recipient SMS/WhatsApp</label><input class="form-input mono" placeholder="+27 82 XXX XXXX"></div>
         <div class="form-row">
           <div class="form-group"><label class="form-label">customer_name</label><input class="form-input" value="Test Customer"></div>
@@ -11889,9 +11889,9 @@ High-value transaction — verify with bank.
       <div class="card">
         <div class="card-hdr">Recent Test Sends</div>
         ${[
-          {name:'payment_receipt_za',to:'ananya@biprapay.co.za',ch:'Email',status:'delivered',t:'09:38'},
+          {name:'payment_receipt_za',to:'ananya@biprapay.com',ch:'Email',status:'delivered',t:'09:38'},
           {name:'payment_failed_za',to:'+27 82 XXX 4821',ch:'SMS',status:'delivered',t:'09:22'},
-          {name:'fraud_alert_za',to:'ops@biprapay.co.za',ch:'Email',status:'delivered',t:'08:50'},
+          {name:'fraud_alert_za',to:'ops@biprapay.com',ch:'Email',status:'delivered',t:'08:50'},
         ].map(s=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
           <div style="flex:1"><div style="font-family:var(--mono);font-size:11px;color:var(--brand)">${s.name}</div><div style="font-size:11px;color:var(--ink4)">${s.to} · ${s.ch}</div></div>
           <span class="badge b-active">${s.status}</span>
@@ -11928,7 +11928,7 @@ function payLinkTab(t){
         <td class="mono" style="font-size:11px">${p.uses}</td>
         <td style="font-size:11px;color:var(--ink4)">${p.expires}</td>
         <td style="display:flex;gap:4px">
-          <button class="btn btn-ghost btn-xs" onclick="navigator.clipboard.writeText('https://pay.biprapay.co.za/'+this.closest('tr').querySelector('.mono').textContent).catch(()=>{})">Copy</button>
+          <button class="btn btn-ghost btn-xs" onclick="navigator.clipboard.writeText('https://pay.biprapay.com/'+this.closest('tr').querySelector('.mono').textContent).catch(()=>{})">Copy</button>
           <button class="btn btn-ghost btn-xs">QR</button>
           ${p.status==='pending'?'<button class="btn btn-ghost btn-xs">WhatsApp</button>':''}
         </td>
@@ -12019,7 +12019,7 @@ function payLinkTab(t){
             <rect x="6" y="12" width="3" height="2"/><rect x="14" y="11" width="2" height="3"/><rect x="17" y="12" width="2" height="2"/>
             <rect x="12" y="14" width="2" height="2"/><rect x="16" y="16" width="5" height="2"/>
           </svg>
-          <div style="font-family:var(--mono);font-size:11px;color:var(--ink4)">pay.biprapay.co.za/PLK-2040</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--ink4)">pay.biprapay.com/PLK-2040</div>
           <div style="font-size:12px;color:var(--ink3);margin-top:3px">Product deposit · R 2,000</div>
         </div>
       </div>
@@ -12029,7 +12029,7 @@ function payLinkTab(t){
 function generatePayLink(){
   closeModal('payLinkModal');
   const id='PLK-'+Math.floor(Math.random()*9000+1000);
-  const url='pay.biprapay.co.za/'+id;
+  const url='pay.biprapay.com/'+id;
   const el=document.getElementById('newLinkResult');
   if(el) el.innerHTML=`<div style="background:var(--gr-bg);border:1px solid var(--gr-bd);border-radius:var(--r2);padding:12px">
     <div style="font-size:12px;font-weight:700;color:var(--gr);margin-bottom:6px"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 10l5 5 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>  Payment link created — ${id}</div>
@@ -12175,7 +12175,7 @@ function mPortalTab(t){
     el.innerHTML=`<div class="g2 gap14">
       <div class="card">
         <div class="card-hdr">What Merchants See in Their Portal</div>
-        <div style="font-size:12.5px;color:var(--ink3);margin-bottom:12px">White-labelled self-service at <code style="color:var(--brand)">portal.biprapay.co.za</code> or custom domain.</div>
+        <div style="font-size:12.5px;color:var(--ink3);margin-bottom:12px">White-labelled self-service at <code style="color:var(--brand)">portal.biprapay.com</code> or custom domain.</div>
         ${[
           {s:'Dashboard',d:'Volume, success rate, recent transactions — scoped to their merchant ID',i:'<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 15l4-6 4 3 4-8" stroke-linecap="round" stroke-linejoin="round"/></svg>'},
           {s:'Transactions',d:'Search, filter, export CSV — own transactions only',i:'↔'},
@@ -12269,9 +12269,9 @@ function mPortalTab(t){
           <div class="form-group"><label class="form-label">Primary Colour</label><input type="color" value="#F05A00" style="width:100%;height:34px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer"></div>
           <div class="form-group"><label class="form-label">Header BG</label><input type="color" value="#0B0F1A" style="width:100%;height:34px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer"></div>
         </div>
-        <div class="form-group"><label class="form-label">Logo URL</label><input class="form-input mono" placeholder="https://cdn.biprapay.co.za/logo.svg"></div>
-        <div class="form-group"><label class="form-label">Custom Domain</label><input class="form-input mono" value="portal.biprapay.co.za"></div>
-        <div class="form-group"><label class="form-label">Support Email</label><input class="form-input" value="support@biprapay.co.za"></div>
+        <div class="form-group"><label class="form-label">Logo URL</label><input class="form-input mono" placeholder="https://cdn.biprapay.com/logo.svg"></div>
+        <div class="form-group"><label class="form-label">Custom Domain</label><input class="form-input mono" value="portal.biprapay.com"></div>
+        <div class="form-group"><label class="form-label">Support Email</label><input class="form-input" value="support@biprapay.com"></div>
         <button class="btn btn-primary btn-sm" style="width:100%">Save Branding</button>
       </div>
       <div class="card">
@@ -12797,7 +12797,7 @@ function renderStatusPage(){
     </div>
 
     <div style="margin-top:14px;padding:10px 14px;background:var(--bg);border-radius:var(--r2);font-size:12px;color:var(--ink4)">
-      Subscribe to status updates: <a href="#" style="color:var(--brand);text-decoration:none">status.biprapay.co.za</a> · RSS · Email · SNS · Slack
+      Subscribe to status updates: <a href="#" style="color:var(--brand);text-decoration:none">status.biprapay.com</a> · RSS · Email · SNS · Slack
     </div>`;
 }
 
@@ -13121,7 +13121,7 @@ function settingsTab(t){
           <div class="form-group"><label class="form-label">First Name</label><input class="form-input" value="Ananya"></div>
           <div class="form-group"><label class="form-label">Last Name</label><input class="form-input" value="Mukherjee"></div>
         </div>
-        <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" value="ananya@biprapay.co.za" type="email"></div>
+        <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" value="ananya@biprapay.com" type="email"></div>
         <div class="form-group"><label class="form-label">Phone Number</label><input class="form-input mono" value="+27 82 XXX XXXX"></div>
         <div class="form-group"><label class="form-label">Job Title</label><input class="form-input" value="Head of Payments"></div>
         <div class="form-group"><label class="form-label">Timezone</label>
@@ -13172,7 +13172,7 @@ Sandton, Johannesburg
       <div>
         <div class="card" style="margin-bottom:12px">
           <div class="card-hdr">Branding</div>
-          <div class="form-group"><label class="form-label">Platform Logo URL</label><input class="form-input mono" value="https://cdn.biprapay.co.za/logo.svg"></div>
+          <div class="form-group"><label class="form-label">Platform Logo URL</label><input class="form-input mono" value="https://cdn.biprapay.com/logo.svg"></div>
           <div class="form-row">
             <div class="form-group"><label class="form-label">Brand Colour</label><input type="color" value="#F05A00" style="width:100%;height:34px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer" oninput="document.documentElement.style.setProperty('--brand',this.value)"></div>
             <div class="form-group"><label class="form-label">Accent</label><input type="color" value="#00A86B" style="width:100%;height:34px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer"></div>
@@ -13815,10 +13815,10 @@ setTimeout(()=>{
 // ══════════════════════════════════════
 const SES_DATA = {
   identities: [
-    {domain:'biprapay.co.za',type:'Domain',status:'verified',dkim:'active',spf:'pass',dmarc:'pass'},
-    {domain:'noreply@biprapay.co.za',type:'Email',status:'verified',dkim:'active',spf:'pass',dmarc:'pass'},
-    {domain:'payments@biprapay.co.za',type:'Email',status:'verified',dkim:'active',spf:'pass',dmarc:'pass'},
-    {domain:'alerts@biprapay.co.za',type:'Email',status:'verified',dkim:'active',spf:'pass',dmarc:'pass'},
+    {domain:'biprapay.com',type:'Domain',status:'verified',dkim:'active',spf:'pass',dmarc:'pass'},
+    {domain:'noreply@biprapay.com',type:'Email',status:'verified',dkim:'active',spf:'pass',dmarc:'pass'},
+    {domain:'payments@biprapay.com',type:'Email',status:'verified',dkim:'active',spf:'pass',dmarc:'pass'},
+    {domain:'alerts@biprapay.com',type:'Email',status:'verified',dkim:'active',spf:'pass',dmarc:'pass'},
   ],
   configSets: [
     {name:'biprapay-transactional',tracking:true,reputation:true,events:'bounce,complaint,delivery'},
@@ -13830,7 +13830,7 @@ const SES_LOGS = [
   {id:'01010194d2f7-2b3c4d',to:'zanele@example.co.za',subject:'Refund processed — R 920',status:'delivered',template:'refund_confirmed_za',time:'09:28:04',latency:'640ms'},
   {id:'01010194d2f7-3c4d5e',to:'priya@example.co.za',subject:'Payment failed — R 2,999',status:'bounced',template:'payment_failed_za',time:'09:15:18',latency:'—'},
   {id:'01010194d2f7-4d5e6f',to:'thabo@example.co.za',subject:'Dispute opened — DSP-0318',status:'delivered',template:'chargeback_notice_za',time:'08:52:11',latency:'710ms'},
-  {id:'01010194d2f7-5e6f7a',to:'admin@biprapay.co.za',subject:'AML Alert — High risk transaction',status:'delivered',template:'fraud_alert_za',time:'08:14:00',latency:'580ms'},
+  {id:'01010194d2f7-5e6f7a',to:'admin@biprapay.com',subject:'AML Alert — High risk transaction',status:'delivered',template:'fraud_alert_za',time:'08:14:00',latency:'580ms'},
 ];
 function sesTab(t){
   document.querySelectorAll('#sesTabRow .tab').forEach(x=>x.classList.remove('active'));
@@ -14369,8 +14369,8 @@ function cognitoTab(t){
     el.innerHTML=`<div class="tbl-wrap"><table>
       <thead><tr><th>Username</th><th>Pool</th><th>Status</th><th>MFA</th><th>Last Auth</th><th>Created</th></tr></thead>
       <tbody>${[
-        {user:'ananya@biprapay.co.za',pool:'operators',status:'CONFIRMED',mfa:true,last:'09:14',created:'2024-01-15'},
-        {user:'sipho@biprapay.co.za',pool:'operators',status:'CONFIRMED',mfa:true,last:'08:00',created:'2024-01-15'},
+        {user:'ananya@biprapay.com',pool:'operators',status:'CONFIRMED',mfa:true,last:'09:14',created:'2024-01-15'},
+        {user:'sipho@biprapay.com',pool:'operators',status:'CONFIRMED',mfa:true,last:'08:00',created:'2024-01-15'},
         {user:'sipho@siphosstore.co.za',pool:'merchants',status:'CONFIRMED',mfa:false,last:'09:22',created:'2025-11-14'},
         {user:'cto@techbuild.co.za',pool:'merchants',status:'CONFIRMED',mfa:true,last:'08:44',created:'2025-12-01'},
         {user:'owner@mobis.co.za',pool:'merchants',status:'FORCE_CHANGE_PASSWORD',mfa:false,last:'2026-04-28',created:'2026-04-27'},
@@ -14387,9 +14387,9 @@ function cognitoTab(t){
     el.innerHTML=`<div class="tbl-wrap"><table>
       <thead><tr><th>App Client Name</th><th>Pool</th><th>Client ID</th><th>Auth Flows</th><th>Callback URLs</th></tr></thead>
       <tbody>${[
-        {name:'biprapay-console',pool:'operators',id:'3k9m2p4q8r',flows:'USER_SRP_AUTH, REFRESH_TOKEN',cb:'https://console.biprapay.co.za/callback'},
+        {name:'biprapay-console',pool:'operators',id:'3k9m2p4q8r',flows:'USER_SRP_AUTH, REFRESH_TOKEN',cb:'https://console.biprapay.com/callback'},
         {name:'biprapay-mobile-ops',pool:'operators',id:'5n7t1u6v0w',flows:'USER_SRP_AUTH, REFRESH_TOKEN',cb:'biprapay://callback'},
-        {name:'merchant-portal-web',pool:'merchants',id:'8x2y4z6a1b',flows:'USER_SRP_AUTH, REFRESH_TOKEN',cb:'https://portal.biprapay.co.za/callback'},
+        {name:'merchant-portal-web',pool:'merchants',id:'8x2y4z6a1b',flows:'USER_SRP_AUTH, REFRESH_TOKEN',cb:'https://portal.biprapay.com/callback'},
         {name:'merchant-api-m2m',pool:'merchants',id:'9c3d5e7f2g',flows:'CLIENT_CREDENTIALS',cb:'N/A (machine-to-machine)'},
       ].map(a=>`<tr>
         <td style="font-weight:600;font-size:12.5px">${a.name}</td>
@@ -14523,10 +14523,10 @@ function secretsTab(t){
       <thead><tr><th>Time</th><th>Principal</th><th>Action</th><th>Secret</th><th>Source IP</th></tr></thead>
       <tbody>${[
         {time:'09:41:22',principal:'biprapay-lambda-execution',action:'GetSecretValue',secret:'acquirer-primary',ip:'10.0.1.42 (Lambda VPC)'},
-        {time:'09:38:10',principal:'ananya@biprapay.co.za',action:'DescribeSecret',secret:'rds-master',ip:'102.176.x.x'},
+        {time:'09:38:10',principal:'ananya@biprapay.com',action:'DescribeSecret',secret:'rds-master',ip:'102.176.x.x'},
         {time:'08:52:11',principal:'biprapay-lambda-execution',action:'GetSecretValue',secret:'jwt-signing-key',ip:'10.0.1.44 (Lambda VPC)'},
         {time:'08:14:00',principal:'biprapay-rotation-lambda',action:'PutSecretValue',secret:'rds-master',ip:'10.0.1.50 (Lambda VPC)'},
-        {time:'Yesterday',principal:'sipho@biprapay.co.za',action:'GetSecretValue',secret:'ses-smtp',ip:'41.13.x.x'},
+        {time:'Yesterday',principal:'sipho@biprapay.com',action:'GetSecretValue',secret:'ses-smtp',ip:'41.13.x.x'},
       ].map(e=>`<tr>
         <td style="font-family:var(--mono);font-size:11px;color:var(--ink4)">${e.time}</td>
         <td class="mono" style="font-size:11px">${e.principal}</td>
@@ -14945,7 +14945,7 @@ Authorization: Bearer <span class="cs">ACCESS_TOKEN</span>
           {label:'WABA ID',val:'102XXXXXXXXXX'},
           {label:'Phone Number ID',val:'115XXXXXXXXXX'},
           {label:'Business Account',val:'BipraPay (Pty) Ltd'},
-          {label:'Webhook URL',val:'https://api.biprapay.co.za/wa/webhook'},
+          {label:'Webhook URL',val:'https://api.biprapay.com/wa/webhook'},
           {label:'Verify Token',val:'biprapay_wa_••••••'},
           {label:'Messaging Tier',val:'Tier 2 (10K msg/day)'},
           {label:'Message Rate',val:'80 msg/sec'},
@@ -15287,7 +15287,7 @@ function waConfigTab(t){
           {label:'App Secret',val:'••••••••••••',secret:true},
           {label:'API Version',val:'v19.0',secret:false},
           {label:'Base URL',val:'https://graph.facebook.com',secret:false},
-          {label:'Webhook URL',val:'https://api.biprapay.co.za/wa/webhook',secret:false},
+          {label:'Webhook URL',val:'https://api.biprapay.com/wa/webhook',secret:false},
         ].map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
           <span style="font-size:12.5px;color:var(--ink4)">${r.label}</span>
           <div style="display:flex;align-items:center;gap:6px">
@@ -15349,7 +15349,7 @@ function waConfigTab(t){
       <div class="card">
         <div class="card-hdr">Webhook Configuration</div>
         ${[
-          {label:'Endpoint URL',val:'https://api.biprapay.co.za/wa/webhook'},
+          {label:'Endpoint URL',val:'https://api.biprapay.com/wa/webhook'},
           {label:'Verify Token',val:'Stored in Secrets Manager'},
           {label:'Subscribed Fields',val:'messages, message_deliveries, message_reads, messaging_postbacks'},
           {label:'Last delivery',val:'09:41:23 · 200 OK'},
@@ -17276,7 +17276,7 @@ setTimeout(()=>{
       <div class="auth-sub">BipraPay Gateway Console · Super Admin</div>
       <div class="auth-input-wrap">
         <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="16" height="12" rx="2"/><path d="M2 9l8 5 8-5" stroke-linecap="round"/></svg>
-        <input class="auth-input" type="email" id="authEmail" placeholder="ananya@biprapay.co.za" value="ananya@biprapay.co.za">
+        <input class="auth-input" type="email" id="authEmail" placeholder="ananya@biprapay.com" value="ananya@biprapay.com">
       </div>
       <div class="auth-input-wrap">
         <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="9" width="10" height="8" rx="2"/><path d="M7 9V7a3 3 0 016 0v2" stroke-linecap="round"/></svg>
@@ -17469,7 +17469,7 @@ function renderSettingsProfile(el){
             </div>
             <div class="form-group"><label class="form-label">Email Address</label>
               <div style="position:relative">
-                <input class="form-input" value="ananya@biprapay.co.za" type="email" style="padding-right:90px">
+                <input class="form-input" value="ananya@biprapay.com" type="email" style="padding-right:90px">
                 <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:var(--gr);background:var(--gr-bg);padding:2px 7px;border-radius:4px">Verified</span>
               </div>
             </div>
@@ -17575,7 +17575,7 @@ function renderSettingsOrg(el){
         <div class="settings-section">
           <div class="settings-section-title">Branding</div>
           <div class="card">
-            <div class="form-group"><label class="form-label">Platform Logo URL</label><input class="form-input mono" value="https://cdn.biprapay.co.za/logo.svg"></div>
+            <div class="form-group"><label class="form-label">Platform Logo URL</label><input class="form-input mono" value="https://cdn.biprapay.com/logo.svg"></div>
             <div class="form-row">
               <div class="form-group"><label class="form-label">Brand Colour</label>
                 <div style="display:flex;gap:8px;align-items:center">
@@ -18496,7 +18496,7 @@ function popiaTab(t){
             ${[
               {l:'Name',v:'Ananya Mukherjee'},
               {l:'Title',v:'Head of Payments'},
-              {l:'Email',v:'popia@biprapay.co.za'},
+              {l:'Email',v:'popia@biprapay.com'},
               {l:'Regulator Ref',v:'2024/IO/00842'},
               {l:'Deputy IO',v:'Sipho Dlamini'},
               {l:'Last review',v:'2026-03-01'},
@@ -19359,7 +19359,7 @@ function refundTab(t){
           {l:'API Base URL',v:'https://api.trasfund.co.za/v2'},
           {l:'Merchant ID',v:'TF-MRC-BIPRAPAY-001'},
           {l:'Auth',v:'OAuth 2.0 Bearer · Token expires 3600s'},
-          {l:'Webhook URL',v:'https://api.biprapay.co.za/webhooks/trasfund'},
+          {l:'Webhook URL',v:'https://api.biprapay.com/webhooks/trasfund'},
           {l:'Webhook Secret',v:'Stored in Secrets Manager'},
           {l:'Timeout',v:'30 seconds'},
           {l:'Retry Policy',v:'3 attempts · Exponential backoff'},
@@ -20031,7 +20031,7 @@ async function authLogin(){
   if(error){
     const input = document.getElementById('authPass');
     if(input){ input.style.borderColor='var(--red)'; input.style.boxShadow='0 0 0 3px var(--red-bg)'; }
-    toast('Invalid credentials. Try ananya@biprapay.co.za / Demo2026!','warn',4000);
+    toast('Invalid credentials. Try ananya@biprapay.com / Demo2026!','warn',4000);
     setTimeout(()=>{ if(input){ input.style.borderColor=''; input.style.boxShadow=''; }},2000);
     return;
   }
@@ -21813,7 +21813,7 @@ function buildHPPPage(el){
           </div>
           <div class="form-group"><label class="form-label">Integration Mode</label>
             <select class="form-input" id="hppMode">
-              <option value="redirect">Redirect — Full page redirect to checkout.biprapay.co.za</option>
+              <option value="redirect">Redirect — Full page redirect to checkout.biprapay.com</option>
               <option value="iframe">iFrame — Embed checkout in your page</option>
               <option value="modal">Modal — Overlay popup on your page</option>
             </select>
@@ -21840,7 +21840,7 @@ function buildHPPPage(el){
               <input class="form-input mono" value="https://merchant.co.za/cancel">
             </div>
           </div>
-          <button class="btn btn-primary btn-sm" style="width:100%" onclick="toast('HPP config saved — checkout.biprapay.co.za/pay/MRC-00142','success',3000)">
+          <button class="btn btn-primary btn-sm" style="width:100%" onclick="toast('HPP config saved — checkout.biprapay.com/pay/MRC-00142','success',3000)">
             <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 10l5 5 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Save HPP Configuration
           </button>
@@ -21873,7 +21873,7 @@ function buildHPPPage(el){
           <div style="background:#f5f5f5;border-radius:var(--r2);overflow:hidden;border:1px solid var(--border)">
             <div style="background:#075E54;padding:8px 12px;display:flex;align-items:center;gap:8px">
               <div style="width:10px;height:10px;border-radius:50%;background:#ff5f57"></div>
-              <div style="flex:1;background:rgba(255,255,255,.15);border-radius:4px;padding:3px 8px;font-size:10px;color:rgba(255,255,255,.7)">checkout.biprapay.co.za/pay/MRC-00142</div>
+              <div style="flex:1;background:rgba(255,255,255,.15);border-radius:4px;padding:3px 8px;font-size:10px;color:rgba(255,255,255,.7)">checkout.biprapay.com/pay/MRC-00142</div>
             </div>
             <div style="padding:16px;background:white">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
@@ -21924,7 +21924,7 @@ Authorization: Bearer sk_live_••••
 <span class="cc">// Response</span>
 {
   <span class="ck">"session_id"</span>: <span class="cs">"cs_live_abc123"</span>,
-  <span class="ck">"checkout_url"</span>: <span class="cs">"https://checkout.biprapay.co.za/pay/cs_live_abc123"</span>,
+  <span class="ck">"checkout_url"</span>: <span class="cs">"https://checkout.biprapay.com/pay/cs_live_abc123"</span>,
   <span class="ck">"expires_at"</span>: <span class="cs">"2026-06-07T10:41:22Z"</span>
 }
 <button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
@@ -21940,7 +21940,7 @@ function generateHPPLink(){
   const el=document.getElementById('hppLinkResult');
   if(el) el.innerHTML=`<div style="background:var(--brand3);border:1px solid var(--brand-border);border-radius:var(--r2);padding:10px">
     <div style="font-size:11px;font-weight:700;color:var(--brand);margin-bottom:6px">Checkout link generated</div>
-    <div style="font-family:var(--mono);font-size:11px;color:var(--ink);word-break:break-all;margin-bottom:8px">https://checkout.biprapay.co.za/pay/${sid}</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--ink);word-break:break-all;margin-bottom:8px">https://checkout.biprapay.com/pay/${sid}</div>
     <div style="display:flex;gap:6px">
       <button class="btn btn-ghost btn-xs" onclick="toast('Copied','info',1200)">Copy Link</button>
       <button class="btn btn-ghost btn-xs" onclick="toast('Link shared via SES to ${email}','success',2000)">Email to Customer</button>
@@ -22059,7 +22059,7 @@ function buildWidgetDocs(el){
           </div>
           <div class="code-block" style="font-size:10.5px">
 <span class="cc">&lt;!-- 1. Add to your &lt;head&gt; --&gt;</span>
-<span class="ck">&lt;script</span> src=<span class="cs">"https://js.biprapay.co.za/v2/biprapay.js"</span><span class="ck">&gt;&lt;/script&gt;</span>
+<span class="ck">&lt;script</span> src=<span class="cs">"https://js.biprapay.com/v2/biprapay.js"</span><span class="ck">&gt;&lt;/script&gt;</span>
 
 <span class="cc">&lt;!-- 2. Add mount point --&gt;</span>
 <span class="ck">&lt;div</span> id=<span class="cs">"biprapay-card-element"</span><span class="ck">&gt;&lt;/div&gt;</span>
@@ -22587,7 +22587,7 @@ function buildPricingPlans(el){
               ${f}
             </div>`).join('')}
           </div>
-          <button class="btn btn-${p.highlight?'ghost':'primary'} btn-sm" style="width:100%;margin-top:20px;background:${p.highlight?'white':'var(--brand)'};color:${p.highlight?'var(--brand)':'white'}" onclick="toast('${p.name} plan — contact sales@biprapay.co.za','info',3000)">
+          <button class="btn btn-${p.highlight?'ghost':'primary'} btn-sm" style="width:100%;margin-top:20px;background:${p.highlight?'white':'var(--brand)'};color:${p.highlight?'var(--brand)':'white'}" onclick="toast('${p.name} plan — contact sales@biprapay.com','info',3000)">
             ${p.price==='Custom'?'Contact Sales':'Get Started'}
           </button>
         </div>`).join('')}
@@ -22746,7 +22746,7 @@ function downloadRecoFile(){
   setTimeout(()=>toast('reco-2026-06-07.csv downloaded · 1,284 rows · 100% matched','success',3000),2000);
 }
 function scheduleRecoEmail(){
-  toast('Daily reconciliation email scheduled — 07:00 SAST to ananya@biprapay.co.za','success',3000);
+  toast('Daily reconciliation email scheduled — 07:00 SAST to ananya@biprapay.com','success',3000);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -23633,7 +23633,7 @@ window.downloadReceipt = function(ref, amount, customer, card, date){
 <div class="row"><span class="label">Result</span><span class="green">APPROVED</span></div>
 <hr>
 <div class="footer">BipraPay (Pty) Ltd · Sandton, Gauteng · PCI DSS Level 1<br>
-This receipt was generated by BipraPay Gateway · console.biprapay.co.za</div>
+This receipt was generated by BipraPay Gateway · console.biprapay.com</div>
 <script>window.onload=()=>window.print();<\/script>
 </body></html>`;
   const blob = new Blob([html],{type:'text/html'});
@@ -23830,7 +23830,7 @@ setTimeout(()=>{
 const POSTMAN_COLLECTION = {
   info: {
     name: "BipraPay Gateway API",
-    description: "Complete collection for BipraPay Payment Gateway API v1\nBase URL: https://api.biprapay.co.za\nSandbox: https://sandbox.biprapay.co.za\n\nAuthentication: Bearer token in Authorization header\nAll amounts in ZAR cents (R1.00 = 100)",
+    description: "Complete collection for BipraPay Payment Gateway API v1\nBase URL: https://api.biprapay.com\nSandbox: https://sandbox.biprapay.com\n\nAuthentication: Bearer token in Authorization header\nAll amounts in ZAR cents (R1.00 = 100)",
     schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     version: "1.0.0"
   },
@@ -23839,7 +23839,7 @@ const POSTMAN_COLLECTION = {
     bearer: [{ key: "token", value: "{{sp_key}}", type: "string" }]
   },
   variable: [
-    { key: "base_url", value: "https://sandbox.biprapay.co.za", type: "string" },
+    { key: "base_url", value: "https://sandbox.biprapay.com", type: "string" },
     { key: "sp_key",   value: "sk_test_your_key_here",          type: "string" },
     { key: "merchant_id", value: "MRC-00142",                   type: "string" }
   ],
@@ -24104,19 +24104,19 @@ info:
   description: |
     BipraPay Payment Gateway API for South African merchants.
     All amounts are in ZAR cents (R1.00 = 100 cents).
-    Sandbox base URL: https://sandbox.biprapay.co.za
-    Production base URL: https://api.biprapay.co.za
+    Sandbox base URL: https://sandbox.biprapay.com
+    Production base URL: https://api.biprapay.com
   contact:
     name: BipraPay Developer Support
-    email: developers@biprapay.co.za
-    url: https://developers.biprapay.co.za
+    email: developers@biprapay.com
+    url: https://developers.biprapay.com
   license:
     name: Proprietary
 
 servers:
-  - url: https://sandbox.biprapay.co.za
+  - url: https://sandbox.biprapay.com
     description: Sandbox environment
-  - url: https://api.biprapay.co.za
+  - url: https://api.biprapay.com
     description: Production environment
 
 security:
