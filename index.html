@@ -7205,11 +7205,11 @@ html.dark .hdr-ai-btn {
     </div>
   </div>
   <div class="pad">
-    <div class="g4 gap14">
-      <div class="stat blue"><div class="stat-lbl">Total Users</div><div class="stat-val">12</div><div class="stat-meta">Across 4 roles</div></div>
-      <div class="stat green"><div class="stat-lbl">2FA Enabled</div><div class="stat-val">10 / 12</div><div class="stat-meta">83% compliance</div></div>
-      <div class="stat amber"><div class="stat-lbl">Pending Invites</div><div class="stat-val">2</div><div class="stat-meta">Expires in 48h</div></div>
-      <div class="stat red"><div class="stat-lbl">2FA Non-Compliant</div><div class="stat-val">2</div><div class="stat-meta">Action required by policy</div></div>
+    <div class="g4 gap14" id="rbacStatGrid">
+      <div class="stat blue"><div class="stat-lbl">Total Users</div><div class="stat-val">—</div><div class="stat-meta">Staff accounts</div></div>
+      <div class="stat green"><div class="stat-lbl">Active</div><div class="stat-val">—</div><div class="stat-meta">Can sign in</div></div>
+      <div class="stat amber"><div class="stat-lbl">Deactivated</div><div class="stat-val">—</div><div class="stat-meta">Sign-in blocked</div></div>
+      <div class="stat purple"><div class="stat-lbl">Roles In Use</div><div class="stat-val">—</div><div class="stat-meta">Of 6 defined roles</div></div>
     </div>
     <div class="tab-row" id="rbacTabRow">
       <button class="tab active" onclick="rbacTab('users')">Users</button>
@@ -7226,21 +7226,25 @@ html.dark .hdr-ai-btn {
   <div class="modal" style="width:460px">
     <div class="modal-hdr"><h3>Invite Team Member</h3><button class="close-x" onclick="closeModal('inviteUserModal')"><svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4l12 12M16 4L4 16" stroke-linecap="round"/></svg></button></div>
     <div class="modal-body">
-      <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" placeholder="colleague@company.co.za" type="email"></div>
-      <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" placeholder="Sipho Dlamini"></div>
+      <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" id="invEmail" placeholder="colleague@company.co.za" type="email"></div>
+      <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="invName" placeholder="Sipho Dlamini"></div>
       <div class="form-group"><label class="form-label">Role</label>
-        <select class="form-input"><option>Super Admin — Full access</option><option>Finance — Settlements, refunds, reports</option><option>Developer — API, webhooks, sandbox</option><option>Support — View transactions, initiate refunds</option><option>Read-Only — View only, no actions</option><option>Risk Analyst — Risk & compliance only</option></select>
+        <select class="form-input" id="invRole">
+          <option value="read_only">Read-Only — View only, no actions</option>
+          <option value="support">Support — View transactions, initiate refunds</option>
+          <option value="developer">Developer — API, webhooks, sandbox</option>
+          <option value="finance">Finance — Settlements, refunds, reports</option>
+          <option value="risk_analyst">Risk Analyst — Risk &amp; compliance only</option>
+          <option value="super_admin">Super Admin — Full access</option>
+        </select>
       </div>
-      <div class="form-group"><label class="form-label">Require 2FA on First Login</label>
-        <div class="toggle-wrap" style="margin-top:4px"><div class="toggle on green"></div><span class="toggle-label">Force 2FA setup before access granted</span></div>
-      </div>
-      <div class="form-group"><label class="form-label">Access Expiry</label>
-        <select class="form-input"><option>No expiry</option><option>90 days</option><option>180 days</option><option>1 year</option></select>
+      <div style="font-size:11.5px;color:var(--ink4);background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px">
+        The account is created immediately with a temporary password shown once to you — share it securely and have them change it after first sign-in. Email-link invites arrive once an email provider is connected.
       </div>
     </div>
     <div class="modal-ft">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('inviteUserModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="closeModal('inviteUserModal')">Send Invite</button>
+      <button class="btn btn-primary btn-sm" onclick="inviteUserAction()">Create Account</button>
     </div>
   </div>
 </div>
@@ -11322,22 +11326,8 @@ function rbacTab(t){
   document.querySelectorAll('#rbacTabRow .tab').forEach(x=>{if(x.getAttribute('onclick')?.includes("'"+t+"'"))x.classList.add('active');});
   const el=document.getElementById('rbacContent'); if(!el)return;
   if(t==='users'){
-    el.innerHTML=`<div class="tbl-wrap"><table>
-      <thead><tr><th></th><th>Name</th><th>Email</th><th>Role</th><th>2FA</th><th>Status</th><th>Last Active</th><th></th></tr></thead>
-      <tbody>${USERS_DATA.map(u=>`<tr>
-        <td><div style="width:28px;height:28px;border-radius:50%;background:${u.color}20;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${u.color}">${u.initials}</div></td>
-        <td style="font-weight:600">${u.name}</td>
-        <td style="font-size:12px;color:var(--ink4)">${u.email}</td>
-        <td><span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:8px;background:var(--brand3);color:var(--brand)">${u.role}</span></td>
-        <td>${u.twofa?'<span class="badge b-active">Enabled</span>':'<span class="badge b-failed">Disabled</span>'}</td>
-        <td><span class="badge b-${u.status==='active'?'active':'processing'}">${u.status}</span></td>
-        <td style="font-size:11px;color:var(--ink4);font-family:var(--mono)">${u.last}</td>
-        <td style="display:flex;gap:4px"><button class="btn btn-ghost btn-xs">Edit</button><button class="btn btn-danger btn-xs">Deactivate</button></td>
-      </tr>`).join('')}</tbody>
-    </table></div>
-    <div style="margin-top:12px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:var(--r2);padding:10px;font-size:12px;color:var(--red)">
-      <strong>2 users have 2FA disabled</strong> — Thabo Khumalo and Mohamed Amin. PCI-DSS requires MFA for all admin console users. <button class="btn btn-danger btn-xs" style="margin-left:8px">Send 2FA Reminder</button>
-    </div>`;
+    el.innerHTML=`<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Loading team…</div>`;
+    refreshRbacUsers();
   } else if(t==='roles'){
     el.innerHTML=`<div class="g2 gap14">
       <div class="card">
@@ -11412,6 +11402,94 @@ function rbacTab(t){
       </div>
     </div>`;
   }
+}
+
+// ── Live staff management (Users tab) ─────────────────────────
+const STAFF_ROLE_OPTIONS = [
+  ['super_admin','Super Admin'], ['finance','Finance'], ['developer','Developer'],
+  ['support','Support'], ['risk_analyst','Risk Analyst'], ['read_only','Read-Only'],
+];
+
+async function refreshRbacUsers(){
+  const el = document.getElementById('rbacContent');
+  if(!el) return;
+  let staff = [];
+  try{
+    const db = await _waitForSpDb();
+    staff = await db.fetchStaff();
+  }catch(e){
+    console.error('[BipraPay] Failed to load staff',e);
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Couldn't load the team list — check your connection and retry.</div>`;
+    return;
+  }
+
+  const statGrid = document.getElementById('rbacStatGrid');
+  if(statGrid){
+    const vals = statGrid.querySelectorAll('.stat-val');
+    const active = staff.filter(u=>u.is_active).length;
+    if(vals[0]) vals[0].textContent = staff.length;
+    if(vals[1]) vals[1].textContent = active;
+    if(vals[2]) vals[2].textContent = staff.length - active;
+    if(vals[3]) vals[3].textContent = new Set(staff.map(u=>u.role_id)).size;
+  }
+
+  const initials = (name)=>name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const colors = ['#F05A00','#2563eb','#7c3aed','#0d9488','#db2777','#ca8a04'];
+
+  el.innerHTML=`<div class="tbl-wrap"><table>
+    <thead><tr><th></th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th></th></tr></thead>
+    <tbody>${staff.map((u,i)=>`<tr style="${u.is_active?'':'opacity:.55'}">
+      <td><div style="width:28px;height:28px;border-radius:50%;background:${colors[i%colors.length]}20;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${colors[i%colors.length]}">${initials(u.name)}</div></td>
+      <td style="font-weight:600">${u.name}</td>
+      <td style="font-size:12px;color:var(--ink4)">${u.email}</td>
+      <td><select class="form-input" style="font-size:11.5px;padding:3px 8px;width:auto" onchange="setUserRoleAction('${u.id}', this.value, ${JSON.stringify(u.name)})" ${u.is_active?'':'disabled'}>
+        ${STAFF_ROLE_OPTIONS.map(([id,label])=>`<option value="${id}" ${u.role_id===id?'selected':''}>${label}</option>`).join('')}
+      </select></td>
+      <td><span class="badge b-${u.is_active?'active':'failed'}">${u.is_active?'active':'deactivated'}</span></td>
+      <td style="font-size:11px;color:var(--ink4);font-family:var(--mono)">${new Date(u.created_at).toISOString().slice(0,10)}</td>
+      <td>${u.is_active
+        ? `<button class="btn btn-danger btn-xs" onclick="setUserActiveAction('${u.id}', false, ${JSON.stringify(u.name)})">Deactivate</button>`
+        : `<button class="btn btn-ghost btn-xs" onclick="setUserActiveAction('${u.id}', true, ${JSON.stringify(u.name)})">Reactivate</button>`}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>
+  <div style="margin-top:12px;font-size:12px;color:var(--ink4)">Role changes and deactivations take effect immediately and are recorded in the audit log. Deactivation blocks sign-in at the auth layer.</div>`;
+}
+
+async function setUserRoleAction(userId, roleId, name){
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.setUserRole(userId, roleId);
+    if(res?.error){ toast(res.error,'warn',4000); await refreshRbacUsers(); return; }
+    toast(`${name} is now ${STAFF_ROLE_OPTIONS.find(([id])=>id===roleId)?.[1]||roleId}`,'success',3000);
+  }catch(e){ toast('Role change failed: '+(e?.message||e),'warn',4000); await refreshRbacUsers(); }
+}
+
+async function setUserActiveAction(userId, active, name){
+  if(!confirm(active ? `Reactivate ${name}? They will be able to sign in again.` : `Deactivate ${name}? They will be signed out and blocked from signing in.`)) return;
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.setUserActive(userId, active);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    toast(active ? `${name} reactivated` : `${name} deactivated`, active?'success':'warn', 3000);
+    await refreshRbacUsers();
+  }catch(e){ toast('Failed: '+(e?.message||e),'warn',4000); }
+}
+
+async function inviteUserAction(){
+  const email = document.getElementById('invEmail')?.value?.trim();
+  const name = document.getElementById('invName')?.value?.trim();
+  const roleId = document.getElementById('invRole')?.value||'read_only';
+  if(!email || !name){ toast('Enter the new team member\'s email and name','warn'); return; }
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.inviteUser(email, name, roleId);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    closeModal('inviteUserModal');
+    alert(`Account created for ${name}.\n\nTemporary password (shown once — share it securely and have them change it on first login):\n\n${res.tempPassword}`);
+    document.getElementById('invEmail').value = '';
+    document.getElementById('invName').value = '';
+    await refreshRbacUsers();
+  }catch(e){ toast('Invite failed: '+(e?.message||e),'warn',4000); }
 }
 
 // ══════════════════════════════════════

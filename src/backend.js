@@ -247,6 +247,41 @@ async function revokeApiKey(keyId) {
   return data;
 }
 
+// ── Staff user management ───────────────────────────────────────
+
+async function fetchStaff() {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email, name, role, role_id, is_active, created_at')
+    .order('created_at');
+  if (error) throw error;
+  return data;
+}
+
+async function fetchRoles() {
+  const { data, error } = await supabase.from('roles').select('*').order('id');
+  if (error) throw error;
+  return data;
+}
+
+async function inviteUser(email, name, roleId) {
+  const { data, error } = await supabase.functions.invoke('manage-user', { body: { action: 'invite', email, name, roleId } });
+  if (error) throw error;
+  return data;
+}
+
+async function setUserRole(userId, roleId) {
+  const { data, error } = await supabase.functions.invoke('manage-user', { body: { action: 'setRole', userId, roleId } });
+  if (error) throw error;
+  return data;
+}
+
+async function setUserActive(userId, active) {
+  const { data, error } = await supabase.functions.invoke('manage-user', { body: { action: active ? 'reactivate' : 'deactivate', userId } });
+  if (error) throw error;
+  return data;
+}
+
 async function hasPermission(perm) {
   const { data, error } = await supabase.rpc('has_permission', { perm });
   if (error) { console.error('[BipraPay] has_permission check failed', error); return false; }
@@ -540,6 +575,11 @@ window.SP_DB = {
   createFicReport,
   submitFicReport,
   fetchClientErrors,
+  fetchStaff,
+  fetchRoles,
+  inviteUser,
+  setUserRole,
+  setUserActive,
 };
 
 window.dispatchEvent(new Event('sp-db-ready'));
