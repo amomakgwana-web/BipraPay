@@ -23,8 +23,10 @@ const ENVIRONMENTS = {
 const PRODUCTION_HOSTS = [
   'biprapay.com',
   'www.biprapay.com',
-  'swiz-pay-amomakgwana-web.vercel.app', // Vercel production alias
-  'swiz-pay-git-main-bipra.vercel.app',  // main-branch alias
+  // Vercel production aliases (project "swiz-pay", team "Bipra")
+  'swiz-pay.vercel.app',
+  'swiz-pay-bipra.vercel.app',
+  'swiz-pay-git-main-bipra.vercel.app',
 ];
 
 const isProduction = PRODUCTION_HOSTS.includes(location.hostname);
