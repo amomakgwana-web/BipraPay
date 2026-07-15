@@ -287,9 +287,22 @@ function newIdempotencyKey() {
   return crypto.randomUUID();
 }
 
+async function tokenizeCard(payload) {
+  const { data, error } = await supabase.functions.invoke('vault-tokenize', { body: payload });
+  if (error) throw error;
+  return data;
+}
+
 async function createPayment(payload) {
   const body = { idempotencyKey: newIdempotencyKey(), ...payload };
   const { data, error } = await supabase.functions.invoke('process-payment', { body });
+  if (error) throw error;
+  return data;
+}
+
+async function confirmThreeDs(ref, otp) {
+  const body = { ref, otp, idempotencyKey: newIdempotencyKey() };
+  const { data, error } = await supabase.functions.invoke('confirm-3ds', { body });
   if (error) throw error;
   return data;
 }
@@ -324,7 +337,9 @@ window.SP_DB = {
   verifyMfa,
   getProfile,
   signOut,
+  tokenizeCard,
   createPayment,
+  confirmThreeDs,
   createRefund,
   randToCents,
 };

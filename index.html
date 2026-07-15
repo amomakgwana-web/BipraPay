@@ -6641,6 +6641,14 @@ html.dark .hdr-ai-btn {
             <input class="form-input mono" id="piCard" placeholder="4111 1111 1111 1111" value="4111 1111 1111 1111" style="letter-spacing:.08em">
           </div>
           <div class="form-row">
+            <div class="form-group"><label class="form-label">Expiry (MM/YY)</label>
+              <input class="form-input mono" id="piExpiry" placeholder="12/29" value="12/29">
+            </div>
+            <div class="form-group"><label class="form-label">CVV</label>
+              <input class="form-input mono" id="piCvv" placeholder="123" value="123" maxlength="4">
+            </div>
+          </div>
+          <div class="form-row">
             <div class="form-group"><label class="form-label">Amount (ZAR)</label>
               <input class="form-input mono" id="piAmount" placeholder="350.00" value="350.00">
             </div>
@@ -20242,91 +20250,148 @@ window.openModal = function(id){
 // The modal HTML will be injected after — JS references it here
 let payFlowState = { step:0, txnRef:'', amount:0, card:'', auth3ds:false };
 
+function appendFlowStep(label, detail){
+  return new Promise(resolve=>{
+    const log = document.getElementById('piFlowLog');
+    if(!log){ resolve(); return; }
+    const row = document.createElement('div');
+    row.className = 'pay-flow-step';
+    row.style.cssText = 'opacity:0;transform:translateY(4px);transition:.2s';
+    row.innerHTML = `
+      <div class="pay-flow-num done">
+        <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="2.8"><path d="M4 10l5 5 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="pay-flow-body">
+        <div class="pay-flow-title">${label}</div>
+        <div class="pay-flow-detail">${detail}</div>
+      </div>`;
+    log.appendChild(row);
+    setTimeout(()=>{ row.style.opacity='1'; row.style.transform='none'; }, 20);
+    log.scrollTop = log.scrollHeight;
+    setTimeout(resolve, 350);
+  });
+}
+
 async function startPaymentFlow(){
-  const card    = document.getElementById('piCard')?.value?.trim();
+  const cardRaw = document.getElementById('piCard')?.value?.trim();
+  const expRaw  = document.getElementById('piExpiry')?.value?.trim();
+  const cvv     = document.getElementById('piCvv')?.value?.trim();
   const amount  = parseFloat(document.getElementById('piAmount')?.value||'0');
   const merch   = document.getElementById('piMerchant')?.value||'MRC-00142';
   const channel = document.getElementById('piChannel')?.value||'CNP';
-  if(!card || !amount){ toast('Enter card number and amount','warn'); return; }
+  const card = (cardRaw||'').replace(/\s/g,'');
+  const [expMonthStr, expYearStr] = (expRaw||'').split('/').map(s=>s?.trim());
+  const expMonth = parseInt(expMonthStr,10);
+  const expYear = expYearStr ? 2000+parseInt(expYearStr,10) : NaN;
+  if(!card || !amount || !cvv || !expMonth || !expYear){ toast('Enter card number, expiry (MM/YY), CVV and amount','warn'); return; }
 
   const log = document.getElementById('piFlowLog');
   if(log) log.innerHTML = '';
   const result = document.getElementById('piResult');
   if(result) result.innerHTML = '';
 
-  // The server is the source of truth: it scores risk, decides approve/decline,
-  // and writes the transaction row. The steps below narrate that real outcome.
-  let server;
+  // BipraPay is its own processor: the PAN and CVV are sent once, straight to
+  // the vault, and never touch process-payment or any table again — only the
+  // resulting token does. The vault and the risk engine are the sources of
+  // truth for everything narrated below.
+  let tok, server;
   try{
     const db = await _waitForSpDb();
-    server = await db.createPayment({ card, amount, merchant: merch, channel });
-    if(server?.error){ toast(server.error,'warn',4000); return; }
-  }catch(e){
-    toast('Payment processing failed: '+(e?.message||e),'warn',4000);
-    return;
-  }
+    tok = await db.tokenizeCard({ pan: card, expMonth, expYear, cvv, merchant: merch });
+    if(tok?.error){ toast(tok.error,'warn',4000); return; }
+  }catch(e){ toast('Card tokenisation failed: '+(e?.message||e),'warn',4000); return; }
 
-  payFlowState = { step:0, txnRef:server.ref, amount, card, auth3ds:false, approved:server.approved, risk:server.risk, authCode:server.authCode };
-  runPaymentStep(0, channel, merch);
+  try{
+    const db = await _waitForSpDb();
+    server = await db.createPayment({ paymentMethodToken: tok.token, amount, merchant: merch, channel });
+    if(server?.error){ toast(server.error,'warn',4000); return; }
+  }catch(e){ toast('Payment processing failed: '+(e?.message||e),'warn',4000); return; }
+
+  payFlowState = {
+    txnRef:server.ref, amount, merch, channel,
+    brand:tok.brand, last4:tok.last4,
+    requiresChallenge:server.requiresChallenge,
+    approved:server.approved, risk:server.risk, authCode:server.authCode,
+  };
+  runPaymentSteps();
 }
 
-function runPaymentStep(step, channel, merch){
+async function runPaymentSteps(){
+  const s = payFlowState;
+  await appendFlowStep('Card tokenisation', `${s.brand} •••• ${s.last4} → vault token · PAN discarded, never stored`);
+  await appendFlowStep('BIN lookup', `${s.brand} · South Africa · Not prepaid`);
+  await appendFlowStep('Fraud scoring', `Score: ${s.risk}/100 · Velocity: OK · Device: known · Geo: ZA`);
+
+  if(s.requiresChallenge){
+    await appendFlowStep('3DS2 authentication', 'AReq → DS → ACS · Step-up required · transStatus: C');
+    showThreeDsChallenge();
+    return;
+  }
+  await appendFlowStep('3DS2 authentication', 'AReq → DS → ACS · Frictionless · transStatus: Y · ECI: 05 · CAVV generated');
+  await finishPaymentSteps();
+}
+
+function showThreeDsChallenge(){
   const log = document.getElementById('piFlowLog');
   if(!log) return;
-  const approved = payFlowState.approved;
-  const steps = [
-    { label:'Card tokenisation', detail:`PAN ${payFlowState.card.slice(0,4)} •••• ${payFlowState.card.slice(-4)} → Vault token`, delay:400, status:'done' },
-    { label:'BIN lookup', detail:'Issuer: FNB Bank ZA · Visa Debit · South Africa · Not prepaid', delay:300, status:'done' },
-    { label:'Fraud scoring', detail:`Score: ${payFlowState.risk}/100 · Velocity: OK · Device: known · Geo: ZA`, delay:500, status:'done' },
-    { label:'3DS2 authentication', detail:'AReq → DS → ACS · Frictionless · transStatus: Y · ECI: 05 · CAVV generated', delay:800, status:'done' },
-    { label:'Acquirer routing', detail:`Channel: ${channel} · Primary: BipraPay Acquiring Engine · Latency: 48ms`, delay:300, status:'done' },
-    { label:'ISO 8583 authorisation', detail:`0200 → Acquirer · DE004: ${Math.round(payFlowState.amount*100)} · DE055: EMV TLV · Response: ${approved?'0210':'0210 (declined)'}`, delay:600, status:'done' },
-    { label:approved?'Response: 00 Approved':'Response: 05 Declined', detail:`Auth code: ${payFlowState.authCode} · ARN: ${payFlowState.txnRef} · T+0`, delay:200, status:'done' },
-    { label:'Webhook dispatched', detail:`payment.${approved?'success':'failed'} → SQS → SNS → merchant webhook · EventBridge event published`, delay:300, status:'done' },
-    { label:approved?'Settlement queued':'No settlement — declined', detail:approved?`${merch} · R ${payFlowState.amount.toFixed(2)} · T+1 settlement batch`:'Transaction was not authorised', delay:200, status:'done' },
-  ];
-  let cumDelay = 0;
-  steps.forEach((s, i)=>{
-    cumDelay += s.delay;
-    setTimeout(()=>{
-      const row = document.createElement('div');
-      row.className = 'pay-flow-step';
-      row.style.cssText = 'opacity:0;transform:translateY(4px);transition:.2s';
-      row.innerHTML = `
-        <div class="pay-flow-num done">
-          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="2.8"><path d="M4 10l5 5 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-        <div class="pay-flow-body">
-          <div class="pay-flow-title">${s.label}</div>
-          <div class="pay-flow-detail">${s.detail}</div>
-        </div>
-        <div class="pay-flow-time">${(cumDelay/1000).toFixed(1)}s</div>`;
-      log.appendChild(row);
-      setTimeout(()=>{ row.style.opacity='1'; row.style.transform='none'; }, 20);
-      log.scrollTop = log.scrollHeight;
-      if(i === steps.length-1){
-        const result = document.getElementById('piResult');
-        const bg = approved ? 'var(--gr-bg)' : 'var(--red-bg)';
-        const bd = approved ? 'var(--gr-bd)' : 'var(--red-bd)';
-        const fg = approved ? 'var(--gr)' : 'var(--red)';
-        if(result) result.innerHTML = `
-          <div style="background:${bg};border:1px solid ${bd};border-radius:var(--r2);padding:14px;margin-top:10px">
-            <div style="font-size:13px;font-weight:700;color:${fg};margin-bottom:8px">Payment ${approved?'Approved':'Declined'}</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
-              <div><span style="color:var(--ink4)">Ref: </span><strong style="font-family:var(--mono)">${payFlowState.txnRef}</strong></div>
-              <div><span style="color:var(--ink4)">Amount: </span><strong>R ${payFlowState.amount.toFixed(2)}</strong></div>
-              <div><span style="color:var(--ink4)">Auth code: </span><strong style="font-family:var(--mono)">${payFlowState.authCode}</strong></div>
-              <div><span style="color:var(--ink4)">Risk score: </span><strong>${payFlowState.risk}/100</strong></div>
-              <div><span style="color:var(--ink4)">Response: </span><strong style="color:${fg}">${approved?'00 — Approved':'05 — Declined'}</strong></div>
-              <div><span style="color:var(--ink4)">Settlement: </span><strong>${approved?'T+1':'N/A'}</strong></div>
-            </div>
-          </div>`;
-        // The transaction row already exists server-side; the realtime
-        // subscription in loadLiveData() will prepend it into TXNS.
-        toast(`${payFlowState.txnRef} — ${approved?'Approved':'Declined'} · R ${payFlowState.amount.toFixed(2)}`, approved?'success':'warn', 4000);
-      }
-    }, cumDelay);
-  });
+  const box = document.createElement('div');
+  box.id = 'piChallengeBox';
+  box.style.cssText = 'margin-top:10px;padding:12px;border:1px solid var(--bd);border-radius:var(--r2);background:var(--bg2)';
+  box.innerHTML = `
+    <div style="font-size:12px;font-weight:700;margin-bottom:6px">Bank verification required</div>
+    <div style="font-size:11px;color:var(--ink4);margin-bottom:8px">Enter the 6-digit code from your banking app to authorise this payment.</div>
+    <div style="display:flex;gap:8px">
+      <input class="form-input mono" id="piOtp" placeholder="123456" maxlength="6" style="flex:1">
+      <button class="btn btn-primary btn-sm" onclick="confirmChallenge()">Verify</button>
+    </div>`;
+  log.appendChild(box);
+  log.scrollTop = log.scrollHeight;
+  document.getElementById('piOtp')?.focus();
+}
+
+async function confirmChallenge(){
+  const otp = document.getElementById('piOtp')?.value?.trim();
+  if(!/^\d{6}$/.test(otp||'')){ toast('Enter the 6-digit code','warn'); return; }
+  document.getElementById('piChallengeBox')?.remove();
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.confirmThreeDs(payFlowState.txnRef, otp);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    payFlowState.approved = res.approved;
+    payFlowState.authCode = res.authCode;
+    await appendFlowStep(res.approved?'Challenge passed':'Challenge failed', res.approved?'ACS: Y · Liability shift applied':'ACS: N · Step-up authentication failed');
+    await finishPaymentSteps();
+  }catch(e){ toast('3DS confirmation failed: '+(e?.message||e),'warn',4000); }
+}
+
+async function finishPaymentSteps(){
+  const s = payFlowState;
+  const approved = s.approved;
+  await appendFlowStep('Acquirer routing', `Channel: ${s.channel} · Primary: BipraPay Acquiring Engine · Latency: 48ms`);
+  await appendFlowStep('ISO 8583 authorisation', `0200 → Acquirer · DE004: ${Math.round(s.amount*100)} · DE055: EMV TLV · Response: ${approved?'0210':'0210 (declined)'}`);
+  await appendFlowStep(approved?'Response: 00 Approved':'Response: 05 Declined', `Auth code: ${s.authCode||'—'} · ARN: ${s.txnRef} · T+0`);
+  await appendFlowStep('Webhook dispatched', `payment.${approved?'success':'failed'} → SQS → SNS → merchant webhook · EventBridge event published`);
+  await appendFlowStep(approved?'Settlement queued':'No settlement — declined', approved?`${s.merch} · R ${s.amount.toFixed(2)} · T+1 settlement batch`:'Transaction was not authorised');
+
+  const result = document.getElementById('piResult');
+  const bg = approved ? 'var(--gr-bg)' : 'var(--red-bg)';
+  const bd = approved ? 'var(--gr-bd)' : 'var(--red-bd)';
+  const fg = approved ? 'var(--gr)' : 'var(--red)';
+  if(result) result.innerHTML = `
+    <div style="background:${bg};border:1px solid ${bd};border-radius:var(--r2);padding:14px;margin-top:10px">
+      <div style="font-size:13px;font-weight:700;color:${fg};margin-bottom:8px">Payment ${approved?'Approved':'Declined'}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+        <div><span style="color:var(--ink4)">Ref: </span><strong style="font-family:var(--mono)">${s.txnRef}</strong></div>
+        <div><span style="color:var(--ink4)">Amount: </span><strong>R ${s.amount.toFixed(2)}</strong></div>
+        <div><span style="color:var(--ink4)">Auth code: </span><strong style="font-family:var(--mono)">${s.authCode||'—'}</strong></div>
+        <div><span style="color:var(--ink4)">Risk score: </span><strong>${s.risk}/100</strong></div>
+        <div><span style="color:var(--ink4)">Response: </span><strong style="color:${fg}">${approved?'00 — Approved':'05 — Declined'}</strong></div>
+        <div><span style="color:var(--ink4)">Settlement: </span><strong>${approved?'T+1':'N/A'}</strong></div>
+      </div>
+    </div>`;
+  // The transaction row already exists server-side; the realtime
+  // subscription in loadLiveData() will prepend it into TXNS.
+  toast(`${s.txnRef} — ${approved?'Approved':'Declined'} · R ${s.amount.toFixed(2)}`, approved?'success':'warn', 4000);
 }
 
 // ── 3. LIVE METRICS (SSE-style) ───────────────────────────────

@@ -9,7 +9,6 @@ function json(body: unknown, status = 200) {
 
 const TYPE_MAP: Record<string, string> = { CNP: 'CNP', CP: 'CP', PayShap: 'Push', 'WA Pay': 'Push' };
 const METHOD_MAP: Record<string, string> = {
-  CNP: 'Visa 3DS2',
   CP: 'Chip & PIN',
   PayShap: 'PayShap',
   'WA Pay': 'WhatsApp Pay',
@@ -25,10 +24,9 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const { card, amount, merchant, channel, idempotencyKey } = body ?? {};
-  const cardDigits = String(card ?? '').replace(/\s/g, '');
-  if (cardDigits.length < 8 || !/^\d+$/.test(cardDigits)) {
-    return json({ error: 'Invalid card number' }, 400);
+  const { paymentMethodToken, amount, merchant, channel, idempotencyKey } = body ?? {};
+  if (typeof paymentMethodToken !== 'string' || !paymentMethodToken.startsWith('tok_')) {
+    return json({ error: 'A tokenised payment method is required' }, 400);
   }
   const amt = Number(amount);
   if (!Number.isFinite(amt) || amt <= 0) {
@@ -60,6 +58,16 @@ Deno.serve(async (req: Request) => {
     if (existing) return json(existing.response_body, existing.status_code);
   }
 
+  // BipraPay never re-validates card data here — that already happened once,
+  // in the vault, at tokenisation time. This step only resolves the token
+  // to its non-sensitive card metadata for display purposes.
+  const { data: pm } = await admin
+    .from('payment_methods')
+    .select('id, brand, last4')
+    .eq('id', paymentMethodToken)
+    .maybeSingle();
+  if (!pm) return json({ error: 'Unknown or expired payment method token' }, 400);
+
   const merchantId = merchant || 'MRC-00142';
   const { data: merchantRow } = await admin
     .from('merchants')
@@ -72,12 +80,28 @@ Deno.serve(async (req: Request) => {
   }
 
   const type = TYPE_MAP[channel] ?? 'CNP';
-  const method = METHOD_MAP[channel] ?? channel ?? 'Card';
+  const method = channel === 'CNP' ? `${pm.brand} 3DS2` : (METHOD_MAP[channel] ?? channel ?? 'Card');
 
   // Simplified risk model: baseline jitter + a premium for high-value payments.
   const risk = Math.min(97, Math.max(1, Math.round(8 + Math.random() * 25 + (amt > 10000 ? 15 : 0))));
-  const status = risk > 85 ? 'declined' : 'approved';
   const ref = `SPY-${String(channel ?? 'CNP').replace(/\s/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  // Risk-based 3DS2 authentication, same as a real issuer ACS: very low risk
+  // goes through frictionless, very high risk is a hard decline no challenge
+  // can rescue, everything in between requires a step-up challenge before
+  // BipraPay's authorisation engine will approve it.
+  let status: string;
+  let threeDsStatus: string;
+  if (risk > 85) {
+    status = 'declined';
+    threeDsStatus = 'frictionless';
+  } else if (risk > 40) {
+    status = 'pending';
+    threeDsStatus = 'challenge_required';
+  } else {
+    status = 'approved';
+    threeDsStatus = 'frictionless';
+  }
 
   const { data, error } = await admin
     .from('transactions')
@@ -92,6 +116,8 @@ Deno.serve(async (req: Request) => {
       status,
       channel: String(channel ?? '').toLowerCase(),
       merchant_id: merchantId,
+      payment_method_id: pm.id,
+      three_ds_status: threeDsStatus,
       created_by: user.id,
     })
     .select()
@@ -105,7 +131,7 @@ Deno.serve(async (req: Request) => {
     action: 'payment.created',
     entity_type: 'transaction',
     entity_id: data.ref,
-    metadata: { amount: amt, status: data.status, risk: data.risk_score, channel, merchant_id: merchantId, ip },
+    metadata: { amount: amt, status: data.status, risk: data.risk_score, channel, merchant_id: merchantId, three_ds: threeDsStatus, ip },
   });
 
   const responseBody = {
@@ -113,7 +139,11 @@ Deno.serve(async (req: Request) => {
     status: data.status,
     risk: data.risk_score,
     amount: amt,
-    authCode: String(Math.floor(100000 + Math.random() * 900000)),
+    brand: pm.brand,
+    last4: pm.last4,
+    threeDsStatus,
+    requiresChallenge: threeDsStatus === 'challenge_required',
+    authCode: status === 'approved' ? String(Math.floor(100000 + Math.random() * 900000)) : null,
     approved: status === 'approved',
   };
 
