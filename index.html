@@ -5877,6 +5877,7 @@ html.dark .hdr-ai-btn {
       <button class="tab" onclick="cwTab('metrics')">Metrics</button>
       <button class="tab" onclick="cwTab('logs')">Log Insights</button>
       <button class="tab" onclick="cwTab('xray')">X-Ray Traces</button>
+      <button class="tab" onclick="cwTab('live')">Live Errors</button>
     </div>
     <div id="cwContent"></div>
   </div>
@@ -14450,7 +14451,67 @@ function cwTab(t){
         </div>`).join('')}
       </div>
     </div>`;
+  } else if(t==='live'){
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Loading live error data…</div>`;
+    refreshClientErrors();
   }
+}
+
+async function refreshClientErrors(){
+  const el = document.getElementById('cwContent');
+  if(!el) return;
+  let rows = [];
+  try{
+    const db = await _waitForSpDb();
+    rows = await db.fetchClientErrors();
+  }catch(e){ console.error('[BipraPay] Failed to load client errors',e); }
+
+  const now = Date.now();
+  const in24h = rows.filter(r=>now - new Date(r.created_at).getTime() < 86400000);
+  const in7d = rows.filter(r=>now - new Date(r.created_at).getTime() < 7*86400000);
+  const jsCount = rows.filter(r=>r.source==='js_error'||r.source==='unhandled_rejection').length;
+  const apiCount = rows.filter(r=>r.source==='api_error').length;
+
+  const counts = {};
+  rows.forEach(r=>{ counts[r.message] = (counts[r.message]||0)+1; });
+  const topErrors = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  const SOURCE_LABEL = { js_error:'JS Error', unhandled_rejection:'Unhandled Rejection', api_error:'API Error' };
+
+  el.innerHTML = `
+    <div class="g4 gap14" style="margin-bottom:14px">
+      <div class="stat red"><div class="stat-lbl">Errors (24h)</div><div class="stat-val">${in24h.length}</div></div>
+      <div class="stat amber"><div class="stat-lbl">Errors (7d)</div><div class="stat-val">${in7d.length}</div></div>
+      <div class="stat blue"><div class="stat-lbl">JS / Promise Errors</div><div class="stat-val">${jsCount}</div></div>
+      <div class="stat blue"><div class="stat-lbl">API / Edge Function Errors</div><div class="stat-val">${apiCount}</div></div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px 14px;font-size:12px;color:var(--ink4);margin-bottom:14px">
+      <strong style="color:var(--ink3)">This tab is real, unlike the rest of this page.</strong> Everything else under "AWS CloudWatch" is simulated infrastructure this app doesn't actually run on. This tab captures actual browser errors and failed Supabase edge-function calls from real sessions of this app, stored in <code style="background:var(--bg);padding:1px 4px;border-radius:3px">client_errors</code>.
+    </div>
+    <div class="g2 gap14">
+      <div class="card">
+        <div class="card-hdr">Recent Errors</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Time</th><th>Source</th><th>Message</th><th>Context</th></tr></thead>
+          <tbody>${rows.length===0 ? `<tr><td colspan="4" style="text-align:center;color:var(--ink4);padding:16px">No errors captured yet — good sign.</td></tr>` : rows.slice(0,30).map(r=>`<tr>
+            <td style="font-size:11px;color:var(--ink4)">${new Date(r.created_at).toLocaleString('en-ZA',{hour12:false})}</td>
+            <td><span class="badge b-${r.source==='api_error'?'failed':'pending'}">${SOURCE_LABEL[r.source]||r.source}</span></td>
+            <td style="font-size:12px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.message||'').replace(/"/g,'&quot;')}">${r.message}</td>
+            <td style="font-size:11px;color:var(--ink4)">${r.metadata?.function || r.metadata?.filename || '—'}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr">Top Errors</div>
+        ${topErrors.length===0 ? `<div style="padding:10px 0;color:var(--ink4);font-size:12px">Nothing to rank yet.</div>` : topErrors.map(([msg,count])=>`
+          <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;gap:8px">
+              <span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${msg}</span>
+              <strong style="font-family:var(--mono);color:var(--red);flex-shrink:0">${count}</strong>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
 }
 
 // ══════════════════════════════════════

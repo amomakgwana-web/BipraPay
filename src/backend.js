@@ -9,6 +9,48 @@ import { supabase } from './supabaseClient.js';
 const centsToRand = (c) => Math.round(c) / 100;
 const randToCents = (r) => Math.round(Number(r) * 100);
 
+// ── Real client-side observability ──────────────────────────────
+// Captures actual runtime errors from this running app — not simulated
+// CloudWatch data. Best-effort: a logging failure must never itself throw.
+
+async function logClientError(source, message, stack, metadata) {
+  try {
+    await supabase.from('client_errors').insert({
+      source,
+      message: String(message ?? 'Unknown error').slice(0, 2000),
+      stack: stack ? String(stack).slice(0, 4000) : null,
+      url: location.href,
+      user_agent: navigator.userAgent,
+      metadata: metadata ?? null,
+    });
+  } catch (_e) { /* best-effort */ }
+}
+
+window.addEventListener('error', (e) => {
+  logClientError('js_error', e.message, e.error?.stack, { filename: e.filename, lineno: e.lineno });
+});
+window.addEventListener('unhandledrejection', (e) => {
+  const reason = e.reason;
+  logClientError('unhandled_rejection', reason?.message || String(reason), reason?.stack, null);
+});
+
+// Every edge-function call in this file goes through supabase.functions.invoke,
+// so wrapping it once here captures API failures from every flow (payments,
+// refunds, KYC, disputes, settlements, webhooks, DSAR, FIC) without touching
+// each call site.
+const _rawInvoke = supabase.functions.invoke.bind(supabase.functions);
+supabase.functions.invoke = async (name, opts) => {
+  const res = await _rawInvoke(name, opts);
+  if (res.error) logClientError('api_error', res.error.message || String(res.error), null, { function: name });
+  return res;
+};
+
+async function fetchClientErrors(limit = 100) {
+  const { data, error } = await supabase.from('client_errors').select('*').order('created_at', { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data;
+}
+
 function formatTime(iso) {
   return new Date(iso).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
@@ -496,6 +538,7 @@ window.SP_DB = {
   fetchFicReports,
   createFicReport,
   submitFicReport,
+  fetchClientErrors,
 };
 
 window.dispatchEvent(new Event('sp-db-ready'));
