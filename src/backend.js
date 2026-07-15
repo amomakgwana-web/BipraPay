@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient.js';
+import { supabase, SP_ENV } from './supabaseClient.js';
 
 // ══════════════════════════════════════════════════════════════
 // Bridges the Supabase backend into the legacy global-script UI.
@@ -497,6 +497,7 @@ async function submitFicReport(reportId) {
 
 window.SP_DB = {
   supabase,
+  env: SP_ENV,
   fetchTransactions,
   fetchRefunds,
   fetchAuditLog,
