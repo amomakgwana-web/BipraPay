@@ -314,6 +314,145 @@ async function createRefund(payload) {
   return data;
 }
 
+// ── Settlement ledger ────────────────────────────────────────────
+
+function mapSettlementRow(row) {
+  return {
+    id: row.id,
+    merchantId: row.merchant_id,
+    merchantName: row.merchants?.name || row.merchant_id,
+    batchDate: row.batch_date,
+    status: row.status,
+    txnCount: row.txn_count,
+    gross: centsToRand(row.gross_amount_cents),
+    fee: centsToRand(row.fee_amount_cents),
+    net: centsToRand(row.net_amount_cents),
+    createdAt: row.created_at,
+    paidAt: row.paid_at,
+  };
+}
+
+async function fetchSettlements(limit = 50) {
+  const { data, error } = await supabase
+    .from('settlements')
+    .select('*, merchants(name)')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data.map(mapSettlementRow);
+}
+
+async function runSettlement() {
+  const { data, error } = await supabase.functions.invoke('run-settlement', { body: { action: 'generate' } });
+  if (error) throw error;
+  return data;
+}
+
+async function markSettlementPaid(settlementId) {
+  const { data, error } = await supabase.functions.invoke('run-settlement', { body: { action: 'markPaid', settlementId } });
+  if (error) throw error;
+  return data;
+}
+
+// ── Webhook delivery infrastructure ────────────────────────────────
+
+function mapWebhookEndpointRow(row) {
+  return { id: row.id, url: row.url, events: row.events, enabled: row.enabled, createdAt: row.created_at };
+}
+
+async function fetchWebhookEndpoints() {
+  const { data, error } = await supabase.from('webhook_endpoints').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data.map(mapWebhookEndpointRow);
+}
+
+function mapDeliveryRow(row) {
+  return {
+    id: row.id,
+    endpointId: row.endpoint_id,
+    url: row.webhook_endpoints?.url || '—',
+    event: row.event_type,
+    status: row.status,
+    responseCode: row.response_code,
+    durationMs: row.duration_ms,
+    time: row.last_attempt_at || row.created_at,
+  };
+}
+
+async function fetchWebhookDeliveries(limit = 50) {
+  const { data, error } = await supabase
+    .from('webhook_deliveries')
+    .select('*, webhook_endpoints(url)')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data.map(mapDeliveryRow);
+}
+
+async function createWebhookEndpoint(url, events) {
+  const { data, error } = await supabase.functions.invoke('manage-webhook', { body: { action: 'create', url, events } });
+  if (error) throw error;
+  return data;
+}
+
+async function deleteWebhookEndpoint(endpointId) {
+  const { data, error } = await supabase.functions.invoke('manage-webhook', { body: { action: 'delete', endpointId } });
+  if (error) throw error;
+  return data;
+}
+
+async function sendTestWebhook(endpointId) {
+  const { data, error } = await supabase.functions.invoke('manage-webhook', { body: { action: 'sendTest', endpointId } });
+  if (error) throw error;
+  return data;
+}
+
+// ── POPIA DSAR requests ─────────────────────────────────────────────
+
+async function fetchDsarRequests() {
+  const { data, error } = await supabase.from('dsar_requests').select('*').order('requested_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+async function createDsarRequest(subjectName, subjectEmail, requestType) {
+  const { data, error } = await supabase.functions.invoke('dsar-request', { body: { action: 'create', subjectName, subjectEmail, requestType } });
+  if (error) throw error;
+  return data;
+}
+
+async function exportDsarRequest(requestId) {
+  const { data, error } = await supabase.functions.invoke('dsar-request', { body: { action: 'export', requestId } });
+  if (error) throw error;
+  return data;
+}
+
+async function updateDsarStatus(requestId, status, notes) {
+  const { data, error } = await supabase.functions.invoke('dsar-request', { body: { action: 'updateStatus', requestId, status, notes } });
+  if (error) throw error;
+  return data;
+}
+
+// ── FIC (Financial Intelligence Centre) reporting register ──────────
+
+async function fetchFicReports() {
+  const { data, error } = await supabase.from('fic_reports').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+async function createFicReport(reportType, transactionRef, reason, amountCents) {
+  const { data, error } = await supabase.functions.invoke('fic-report', { body: { action: 'create', reportType, transactionRef, reason, amountCents } });
+  if (error) throw error;
+  return data;
+}
+
+async function submitFicReport(reportId) {
+  const { data, error } = await supabase.functions.invoke('fic-report', { body: { action: 'submit', reportId } });
+  if (error) throw error;
+  return data;
+}
+
 window.SP_DB = {
   supabase,
   fetchTransactions,
@@ -342,6 +481,21 @@ window.SP_DB = {
   confirmThreeDs,
   createRefund,
   randToCents,
+  fetchSettlements,
+  runSettlement,
+  markSettlementPaid,
+  fetchWebhookEndpoints,
+  fetchWebhookDeliveries,
+  createWebhookEndpoint,
+  deleteWebhookEndpoint,
+  sendTestWebhook,
+  fetchDsarRequests,
+  createDsarRequest,
+  exportDsarRequest,
+  updateDsarStatus,
+  fetchFicReports,
+  createFicReport,
+  submitFicReport,
 };
 
 window.dispatchEvent(new Event('sp-db-ready'));

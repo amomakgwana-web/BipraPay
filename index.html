@@ -5291,7 +5291,7 @@ html.dark .hdr-ai-btn {
   <div class="page-hdr">
     <div><div class="ph-title">Webhooks & SDKs</div><div class="ph-sub">Event subscriptions · HMAC-SHA256 signing · Retry logic · SDK downloads</div></div>
     <div class="ph-actions">
-      <button class="btn btn-primary btn-sm" onclick="openModal('snsTopicModal')">Add Webhook</button>
+      <button class="btn btn-primary btn-sm" onclick="openModal('addWebhookModal')">Add Webhook</button>
     </div>
   </div>
   <div class="pad">
@@ -5404,8 +5404,7 @@ html.dark .hdr-ai-btn {
   <div class="page-hdr">
     <div><div class="ph-title">Settlement Reports</div><div class="ph-sub">Net payouts · Fee breakdowns · Per channel · Per merchant</div></div>
     <div class="ph-actions">
-      <button class="btn btn-ghost btn-sm">Export PDF</button>
-      <button class="btn btn-ghost btn-sm">Export CSV</button>
+      <button class="btn btn-primary btn-sm" onclick="runSettlementAction()">Run Settlement</button>
     </div>
   </div>
   <div class="pad">
@@ -6624,6 +6623,35 @@ html.dark .hdr-ai-btn {
   </div>
 </div>
 
+
+<!-- ══ ADD WEBHOOK ENDPOINT MODAL ══ -->
+<div class="modal-ov" id="addWebhookModal">
+  <div class="modal" style="width:460px">
+    <div class="modal-hdr">
+      <h3>Add Webhook Endpoint</h3>
+      <button class="close-x" onclick="closeModal('addWebhookModal')">
+        <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4l12 12M16 4L4 16" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Endpoint URL</label>
+        <input class="form-input mono" id="whUrl" placeholder="https://api.mystore.co.za/webhooks/biprapay">
+      </div>
+      <div class="form-section-title">Events</div>
+      <div style="display:flex;flex-direction:column;gap:6px" id="whEventList">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px"><input type="checkbox" class="wh-event" value="payment.success" checked> payment.success</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px"><input type="checkbox" class="wh-event" value="payment.failed" checked> payment.failed</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px"><input type="checkbox" class="wh-event" value="refund.success" checked> refund.success</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px"><input type="checkbox" class="wh-event" value="dispute.opened"> dispute.opened</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px"><input type="checkbox" class="wh-event" value="settlement.paid"> settlement.paid</label>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('addWebhookModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="createWebhookEndpointAction()">Add Endpoint</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ PAYMENT INITIATOR MODAL ══ -->
 <div class="modal-ov" id="payInitiatorModal">
@@ -9417,39 +9445,77 @@ function runApiCall(){
 // ══════════════════════════════════════
 // WEBHOOKS PAGE
 // ══════════════════════════════════════
-function renderWebhooksPage(){
-  const wh = [
-    {url:'https://api.mystore.co.za/webhooks/biprapay',events:['payment.success','payment.failed','refund.completed'],status:'healthy',del:1284},
-    {url:'https://erp.interfile.co.za/payments/hook',events:['settlement.completed','payout.success'],status:'healthy',del:42},
-    {url:'https://notify.internal/alerts',events:['fraud.blocked','chargeback.opened'],status:'degraded',del:7},
-  ];
+async function renderWebhooksPage(){
   const el = document.getElementById('webhookList');
-  if(el) el.innerHTML = wh.map(w=>`
+  const log = document.getElementById('webhookLog');
+  if(el) el.innerHTML = `<div style="padding:16px;text-align:center;color:var(--ink4);font-size:12px">Loading…</div>`;
+  let endpoints = [], deliveries = [];
+  try{
+    const db = await _waitForSpDb();
+    [endpoints, deliveries] = await Promise.all([db.fetchWebhookEndpoints(), db.fetchWebhookDeliveries(20)]);
+  }catch(e){ console.error('[BipraPay] Failed to load webhooks',e); }
+
+  if(el) el.innerHTML = endpoints.length===0
+    ? `<div style="padding:16px;text-align:center;color:var(--ink4);font-size:12px">No webhook endpoints yet — click "Add Webhook" to create one.</div>`
+    : endpoints.map(w=>`
     <div style="padding:12px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <div style="width:8px;height:8px;border-radius:50%;background:${w.status==='healthy'?'var(--gr)':'var(--amb)'}"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:${w.enabled?'var(--gr)':'var(--amb)'}"></div>
         <div style="font-family:var(--mono);font-size:11.5px;color:var(--ink);flex:1;overflow:hidden;text-overflow:ellipsis">${w.url}</div>
-        <span style="font-size:11px;color:var(--ink4)">${w.del} delivered</span>
-        <button class="btn btn-ghost btn-xs">Edit</button>
+        <button class="btn btn-ghost btn-xs" onclick="sendTestWebhookAction('${w.id}')">Send Test</button>
+        <button class="btn btn-ghost btn-xs" onclick="deleteWebhookEndpointAction('${w.id}','${w.url.replace(/'/g,"\\'")}')">Delete</button>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:4px">
-        ${w.events.map(e=>`<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:8px;background:var(--bg2);color:var(--ink3);border:1px solid var(--border)">${e}</span>`).join('')}
+        ${(w.events||[]).map(e=>`<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:8px;background:var(--bg2);color:var(--ink3);border:1px solid var(--border)">${e}</span>`).join('')}
       </div>
     </div>`).join('');
-  const log = document.getElementById('webhookLog');
-  if(log) log.innerHTML = [
-    {event:'payment.success',code:200,dur:'142ms',t:'42s ago'},
-    {event:'refund.completed',code:200,dur:'155ms',t:'1hr ago'},
-    {event:'fraud.blocked',code:503,dur:'timeout',t:'6hrs ago'},
-    {event:'settlement.completed',code:200,dur:'210ms',t:'3hrs ago'},
-    {event:'chargeback.opened',code:200,dur:'180ms',t:'Yesterday'},
-  ].map(l=>`
+
+  if(log) log.innerHTML = deliveries.length===0
+    ? `<div style="padding:16px;text-align:center;color:var(--ink4);font-size:12px">No deliveries yet.</div>`
+    : deliveries.map(l=>`
     <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
       <span style="font-family:var(--mono);font-size:11px;flex:1;color:var(--ink)">${l.event}</span>
-      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${l.code===200?'var(--gr)':'var(--red)'}">${l.code}</span>
-      <span style="font-size:11px;color:var(--ink4)">${l.dur}</span>
-      <span style="font-size:10.5px;color:var(--ink5)">${l.t}</span>
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${l.status==='success'?'var(--gr)':'var(--red)'}">${l.responseCode ?? 'timeout'}</span>
+      <span style="font-size:11px;color:var(--ink4)">${l.durationMs!=null?l.durationMs+'ms':'—'}</span>
+      <span style="font-size:10.5px;color:var(--ink5)">${new Date(l.time).toLocaleString('en-ZA',{hour12:false})}</span>
     </div>`).join('');
+}
+
+async function createWebhookEndpointAction(){
+  const url = document.getElementById('whUrl')?.value?.trim();
+  if(!url || !/^https:\/\//.test(url)){ toast('Enter a valid https:// URL','warn'); return; }
+  const events = Array.from(document.querySelectorAll('.wh-event:checked')).map(x=>x.value);
+  if(events.length===0){ toast('Select at least one event','warn'); return; }
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.createWebhookEndpoint(url, events);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    closeModal('addWebhookModal');
+    alert(`Webhook endpoint created.\n\nSigning secret (shown once — store it now):\n${res.secret}`);
+    document.getElementById('whUrl').value = '';
+    await renderWebhooksPage();
+  }catch(e){ toast('Failed to create webhook: '+(e?.message||e),'warn',4000); }
+}
+
+async function deleteWebhookEndpointAction(endpointId, url){
+  if(!confirm(`Delete webhook endpoint ${url}? This cannot be undone.`)) return;
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.deleteWebhookEndpoint(endpointId);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    toast('Webhook endpoint deleted','success',3000);
+    await renderWebhooksPage();
+  }catch(e){ toast('Failed to delete webhook: '+(e?.message||e),'warn',4000); }
+}
+
+async function sendTestWebhookAction(endpointId){
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.sendTestWebhook(endpointId);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    toast(res.status==='success' ? `Test event delivered — ${res.responseCode} in ${res.durationMs}ms` : `Test delivery failed (${res.responseCode ?? 'timeout'})`, res.status==='success'?'success':'warn', 4000);
+    await renderWebhooksPage();
+  }catch(e){ toast('Test delivery failed: '+(e?.message||e),'warn',4000); }
 }
 
 // ══════════════════════════════════════
@@ -9813,37 +9879,65 @@ function recoRptView(v){
 // ══════════════════════════════════════
 // SETTLEMENT REPORT
 // ══════════════════════════════════════
-function renderSettlementRpt(){
+async function renderSettlementRpt(){
   const el = document.getElementById('settlementRptContent');
   if(!el) return;
+  el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Loading settlements…</div>`;
+  let rows = [];
+  try{
+    const db = await _waitForSpDb();
+    rows = await db.fetchSettlements();
+  }catch(e){ console.error('[BipraPay] Failed to load settlements',e); }
+
+  const pending = rows.filter(r=>r.status==='pending');
+  const grossMtd = rows.reduce((s,r)=>s+r.gross,0);
+  const feeMtd = rows.reduce((s,r)=>s+r.fee,0);
+  const netMtd = rows.reduce((s,r)=>s+r.net,0);
+  const nextNet = pending.reduce((s,r)=>s+r.net,0);
+
   el.innerHTML = `<div class="g4 gap14" style="margin-bottom:14px">
-    <div class="stat green card-sm"><div class="stat-lbl">Next Settlement</div><div class="stat-val" style="font-size:18px">R 142,800</div><div class="stat-meta">Tomorrow 06:00 SAST</div></div>
-    <div class="stat blue card-sm"><div class="stat-lbl">Gross MTD</div><div class="stat-val" style="font-size:18px">R 847K</div></div>
-    <div class="stat amber card-sm"><div class="stat-lbl">Total Fees MTD</div><div class="stat-val" style="font-size:18px">R 12,569</div></div>
-    <div class="stat green card-sm"><div class="stat-lbl">Net to Merchant</div><div class="stat-val" style="font-size:18px">R 834K</div></div>
+    <div class="stat green card-sm"><div class="stat-lbl">Pending Settlement</div><div class="stat-val" style="font-size:18px">R ${nextNet.toLocaleString('en-ZA',{minimumFractionDigits:2})}</div><div class="stat-meta">${pending.length} batch${pending.length===1?'':'es'} awaiting payout</div></div>
+    <div class="stat blue card-sm"><div class="stat-lbl">Gross (all batches)</div><div class="stat-val" style="font-size:18px">R ${grossMtd.toLocaleString('en-ZA',{minimumFractionDigits:2})}</div></div>
+    <div class="stat amber card-sm"><div class="stat-lbl">Total BipraPay Fees</div><div class="stat-val" style="font-size:18px">R ${feeMtd.toLocaleString('en-ZA',{minimumFractionDigits:2})}</div></div>
+    <div class="stat green card-sm"><div class="stat-lbl">Net to Merchants</div><div class="stat-val" style="font-size:18px">R ${netMtd.toLocaleString('en-ZA',{minimumFractionDigits:2})}</div></div>
   </div>
   <div class="card">
     <div class="card-hdr">Settlement History</div>
     <div class="tbl-wrap"><table>
-      <thead><tr><th>Period</th><th>Gross</th><th>BipraPay Fees</th><th>VAT on Fees</th><th>Refunds</th><th>Net Paid</th><th>Settlement Account</th><th>Status</th><th></th></tr></thead>
-      <tbody>${[
-        {p:'Apr 28–30 2026',g:'R 318,500',f:'R 6,052',v:'R 908',r:'R 1,200',n:'R 310,340',a:'FNB ••••4821',s:'success'},
-        {p:'Apr 21–27 2026',g:'R 274,200',f:'R 5,210',v:'R 782',r:'R 600',n:'R 267,608',a:'FNB ••••4821',s:'success'},
-        {p:'Apr 14–20 2026',g:'R 198,700',f:'R 3,775',v:'R 566',r:'R 0',n:'R 194,359',a:'FNB ••••4821',s:'success'},
-        {p:'Apr 7–13 2026',g:'R 142,400',f:'R 2,706',v:'R 406',r:'R 880',n:'R 138,408',a:'FNB ••••4821',s:'success'},
-      ].map(s=>`<tr>
-        <td style="font-weight:600">${s.p}</td>
-        <td class="num">${s.g}</td>
-        <td class="num" style="color:var(--red)">${s.f}</td>
-        <td class="num" style="color:var(--amb)">${s.v}</td>
-        <td class="num" style="color:var(--amb)">${s.r}</td>
-        <td class="num" style="color:var(--gr);font-weight:700">${s.n}</td>
-        <td class="mono" style="font-size:11px">${s.a}</td>
-        <td><span class="badge b-${s.s}">${s.s}</span></td>
-        <td><button class="btn btn-ghost btn-xs">PDF</button></td>
+      <thead><tr><th>Batch</th><th>Merchant</th><th>Txns</th><th>Gross</th><th>BipraPay Fees</th><th>Net Paid</th><th>Status</th><th></th></tr></thead>
+      <tbody>${rows.length===0 ? `<tr><td colspan="8" style="text-align:center;color:var(--ink4);padding:20px">No settlement batches yet — click "Run Settlement" to generate one from unsettled transactions.</td></tr>` : rows.map(s=>`<tr>
+        <td class="mono" style="font-weight:600;font-size:11.5px">${s.id}</td>
+        <td>${s.merchantName}</td>
+        <td class="num">${s.txnCount}</td>
+        <td class="num">R ${s.gross.toLocaleString('en-ZA',{minimumFractionDigits:2})}</td>
+        <td class="num" style="color:var(--red)">R ${s.fee.toLocaleString('en-ZA',{minimumFractionDigits:2})}</td>
+        <td class="num" style="color:var(--gr);font-weight:700">R ${s.net.toLocaleString('en-ZA',{minimumFractionDigits:2})}</td>
+        <td><span class="badge b-${s.status==='paid'?'success':'pending'}">${s.status}</span></td>
+        <td>${s.status==='pending' ? `<button class="btn btn-ghost btn-xs" onclick="markSettlementPaidAction('${s.id}')">Mark Paid</button>` : ''}</td>
       </tr>`).join('')}</tbody>
     </table></div>
   </div>`;
+}
+
+async function runSettlementAction(){
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.runSettlement();
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    toast(res.count>0 ? `Generated ${res.count} settlement batch${res.count===1?'':'es'}` : 'No unsettled transactions to batch','success',4000);
+    await renderSettlementRpt();
+  }catch(e){ toast('Settlement run failed: '+(e?.message||e),'warn',4000); }
+}
+
+async function markSettlementPaidAction(settlementId){
+  if(!confirm(`Mark ${settlementId} as paid?`)) return;
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.markSettlementPaid(settlementId);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    toast(`${settlementId} marked paid`,'success',3000);
+    await renderSettlementRpt();
+  }catch(e){ toast('Failed to mark paid: '+(e?.message||e),'warn',4000); }
 }
 
 // ══════════════════════════════════════
@@ -18524,7 +18618,7 @@ function verifyHMAC(){
 // ══════════════════════════════════════════════════════════════
 // POPIA & REGULATORY COMPLIANCE PAGE
 // ══════════════════════════════════════════════════════════════
-function popiaTab(t){
+async function popiaTab(t){
   document.querySelectorAll('#popiaTabRow .tab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('#popiaTabRow .tab').forEach(x=>{if(x.getAttribute('onclick')?.includes("'"+t+"'"))x.classList.add('active');});
   const el=document.getElementById('popiaContent');
@@ -18606,18 +18700,16 @@ function popiaTab(t){
           <div style="font-size:12.5px;color:var(--ink3);margin-bottom:14px">Data subjects have the right to access, correct, delete, and object to processing of their personal information under POPIA Section 23–25.</div>
           <div class="form-group"><label class="form-label">Request Type</label>
             <select class="form-input" id="dsarType">
-              <option>Access — Provide copy of all personal data held</option>
-              <option>Correction — Correct inaccurate personal data</option>
-              <option>Deletion — Delete personal data (right to erasure)</option>
-              <option>Objection — Object to processing for specific purpose</option>
-              <option>Restriction — Restrict processing pending correction</option>
+              <option value="access">Access — Provide copy of all personal data held</option>
+              <option value="correction">Correction — Correct inaccurate personal data</option>
+              <option value="deletion">Deletion — Delete personal data (right to erasure)</option>
             </select>
           </div>
           <div class="form-row">
-            <div class="form-group"><label class="form-label">Data Subject Name</label><input class="form-input" placeholder="Full legal name"></div>
+            <div class="form-group"><label class="form-label">Data Subject Name</label><input class="form-input" id="dsarSubjectName" placeholder="Full legal name"></div>
             <div class="form-group"><label class="form-label">SA ID / Passport</label><input class="form-input mono" placeholder="8901010000000"></div>
           </div>
-          <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" type="email" placeholder="subject@example.co.za"></div>
+          <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" type="email" id="dsarSubjectEmail" placeholder="subject@example.co.za"></div>
           <div class="form-group"><label class="form-label">Description of Request</label><textarea class="form-input" style="height:80px" placeholder="Describe the specific data or processing activity you are requesting information about…"></textarea></div>
           <div class="form-group"><label class="form-label">Identity Verification Document</label>
             <div style="border:2px dashed var(--border2);border-radius:var(--r2);padding:14px;text-align:center;cursor:pointer;font-size:12px;color:var(--ink4)" onclick="this.style.borderColor='var(--brand)'">
@@ -18634,19 +18726,8 @@ function popiaTab(t){
         </div>
         <div>
           <div class="card" style="margin-bottom:12px">
-            <div class="card-hdr">Open DSARs</div>
-            ${[
-              {id:'DSAR-0042',type:'Access',subject:'Sipho Dlamini',received:'2026-04-28',due:'2026-05-28',status:'In Progress'},
-              {id:'DSAR-0041',type:'Deletion',subject:'Zanele Mokoena',received:'2026-04-15',due:'2026-05-15',status:'Pending Verification'},
-              {id:'DSAR-0040',type:'Correction',subject:'Thabo Khumalo',received:'2026-03-01',due:'2026-04-01',status:'Completed'},
-            ].map(d=>`<div style="padding:10px 0;border-bottom:1px solid var(--border)">
-              <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-                <span style="font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--brand)">${d.id}</span>
-                <span class="badge b-${d.status==='Completed'?'active':d.status==='In Progress'?'processing':'pending'}">${d.status}</span>
-              </div>
-              <div style="font-size:12px;color:var(--ink)">${d.type} · ${d.subject}</div>
-              <div style="font-size:11px;color:var(--ink4)">Received: ${d.received} · Due: ${d.due}</div>
-            </div>`).join('')}
+            <div class="card-hdr">DSAR Requests</div>
+            <div id="dsarOpenList"><div style="padding:10px 0;color:var(--ink4);font-size:12px">Loading…</div></div>
           </div>
           <div class="card">
             <div class="card-hdr">POPIA Response Timelines</div>
@@ -18662,6 +18743,7 @@ function popiaTab(t){
           </div>
         </div>
       </div>`;
+    refreshDsarList();
 
   } else if(t==='retention'){
     el.innerHTML=`<div class="card">
@@ -18827,7 +18909,95 @@ function popiaTab(t){
     </div>`;
   }
 }
-function submitDSAR(){ toast('DSAR submitted — ref DSAR-00'+Math.floor(43+Math.random()*10)+' · Acknowledged within 3 business days','success',5000); }
+async function submitDSAR(){
+  const requestType = document.getElementById('dsarType')?.value||'access';
+  const subjectName = document.getElementById('dsarSubjectName')?.value?.trim();
+  const subjectEmail = document.getElementById('dsarSubjectEmail')?.value?.trim();
+  if(!subjectName || !subjectEmail){ toast('Enter the data subject\'s name and email','warn'); return; }
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.createDsarRequest(subjectName, subjectEmail, requestType);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    toast(`${res.id} submitted — acknowledged within 3 business days`,'success',5000);
+    document.getElementById('dsarSubjectName').value = '';
+    document.getElementById('dsarSubjectEmail').value = '';
+    await refreshDsarList();
+  }catch(e){ toast('DSAR submission failed: '+(e?.message||e),'warn',4000); }
+}
+
+const DSAR_TYPE_LABELS = { access:'Access', correction:'Correction', deletion:'Deletion' };
+const DSAR_STATUS_BADGE = { received:'pending', in_progress:'processing', completed:'active', rejected:'failed' };
+
+async function refreshDsarList(){
+  const el = document.getElementById('dsarOpenList');
+  if(!el) return;
+  let rows = [];
+  try{
+    const db = await _waitForSpDb();
+    rows = await db.fetchDsarRequests();
+  }catch(e){ console.error('[BipraPay] Failed to load DSAR requests',e); }
+
+  const statGrid = document.getElementById('dsarStatGrid');
+  if(statGrid){
+    const open = rows.filter(d=>d.status==='received'||d.status==='in_progress').length;
+    const completed = rows.filter(d=>d.status==='completed').length;
+    const overdue = rows.filter(d=>(d.status==='received'||d.status==='in_progress') && new Date(d.due_at)<new Date()).length;
+    const vals = statGrid.querySelectorAll('.stat-val');
+    if(vals[0]) vals[0].textContent = open;
+    if(vals[1]) vals[1].textContent = completed;
+    if(vals[2]) vals[2].textContent = overdue;
+  }
+
+  el.innerHTML = rows.length===0
+    ? `<div style="padding:10px 0;color:var(--ink4);font-size:12px">No DSAR requests yet.</div>`
+    : rows.map(d=>`<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+          <span style="font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--brand)">${d.id}</span>
+          <span class="badge b-${DSAR_STATUS_BADGE[d.status]||'pending'}">${d.status.replace('_',' ')}</span>
+        </div>
+        <div style="font-size:12px;color:var(--ink)">${DSAR_TYPE_LABELS[d.request_type]||d.request_type} · ${d.subject_name}</div>
+        <div style="font-size:11px;color:var(--ink4)">Received: ${new Date(d.requested_at).toISOString().slice(0,10)} · Due: ${new Date(d.due_at).toISOString().slice(0,10)}</div>
+        ${d.status!=='completed' && d.status!=='rejected' ? `<div style="display:flex;gap:6px;margin-top:6px">
+          ${d.request_type==='access' ? `<button class="btn btn-ghost btn-xs" onclick="exportDsarAction('${d.id}')">Export Data</button>` : ''}
+          <button class="btn btn-ghost btn-xs" onclick="completeDsarAction('${d.id}')">Complete</button>
+          <button class="btn btn-ghost btn-xs" onclick="rejectDsarAction('${d.id}')">Reject</button>
+        </div>` : ''}
+      </div>`).join('');
+}
+
+async function exportDsarAction(requestId){
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.exportDsarRequest(requestId);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    const n = (res.export_data?.transactions?.length||0) + (res.export_data?.refunds?.length||0);
+    toast(`${requestId} — exported ${n} matching record(s)`,'success',4000);
+    await refreshDsarList();
+  }catch(e){ toast('Export failed: '+(e?.message||e),'warn',4000); }
+}
+
+async function completeDsarAction(requestId){
+  if(!confirm(`Mark ${requestId} as completed?`)) return;
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.updateDsarStatus(requestId, 'completed');
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    toast(`${requestId} completed`,'success',3000);
+    await refreshDsarList();
+  }catch(e){ toast('Failed to update status: '+(e?.message||e),'warn',4000); }
+}
+
+async function rejectDsarAction(requestId){
+  const reason = prompt('Reason for rejection:');
+  if(reason===null) return;
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.updateDsarStatus(requestId, 'rejected', reason||null);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    toast(`${requestId} rejected`,'warn',3000);
+    await refreshDsarList();
+  }catch(e){ toast('Failed to update status: '+(e?.message||e),'warn',4000); }
+}
 
 
 
@@ -21010,75 +21180,34 @@ function runNCAAssessment(){
 
 // ── 2. POPIA DSAR AUTOMATION ──────────────────────────────────
 // Extend popiaTab dsar with SLA tracking
-function buildEnhancedDSAR(el){
-  const DSARs=[
-    {id:'DSAR-0042',type:'Access',subject:'Sipho Dlamini',email:'sipho@example.co.za',received:'2026-04-28',due:'2026-05-28',ackDone:true,extractDone:false,responded:false,daysLeft:21},
-    {id:'DSAR-0041',type:'Deletion',subject:'Zanele Mokoena',email:'zanele@example.co.za',received:'2026-04-15',due:'2026-05-15',ackDone:true,extractDone:true,responded:true,daysLeft:0},
-    {id:'DSAR-0040',type:'Correction',subject:'Thabo Khumalo',email:'thabo@example.co.za',received:'2026-03-01',due:'2026-04-01',ackDone:true,extractDone:true,responded:true,daysLeft:-7},
-  ];
+async function buildEnhancedDSAR(el){
   el.innerHTML=`
     <div class="g2 gap14">
       <div>
-        <div class="g3 gap14" style="margin-bottom:14px">
-          ${[
-            {l:'Open DSARs',v:'1',color:'var(--amb)'},
-            {l:'Completed',v:'2',color:'var(--gr)'},
-            {l:'Overdue',v:'0',color:'var(--gr)'},
-          ].map(s=>`<div class="stat" style="border-top-color:${s.color}">
-            <div class="stat-lbl">${s.l}</div>
-            <div class="stat-val" style="color:${s.color}">${s.v}</div>
-          </div>`).join('')}
+        <div class="g3 gap14" style="margin-bottom:14px" id="dsarStatGrid">
+          <div class="stat" style="border-top-color:var(--amb)"><div class="stat-lbl">Open DSARs</div><div class="stat-val" style="color:var(--amb)">—</div></div>
+          <div class="stat" style="border-top-color:var(--gr)"><div class="stat-lbl">Completed</div><div class="stat-val" style="color:var(--gr)">—</div></div>
+          <div class="stat" style="border-top-color:var(--red)"><div class="stat-lbl">Overdue</div><div class="stat-val" style="color:var(--red)">—</div></div>
         </div>
         <div class="card">
-          <div class="card-hdr">
-            <span>DSAR Tracker</span>
-            <button class="btn btn-primary btn-sm" onclick="popiaTab('dsar_form')||toast('New DSAR form — scroll to form below','info')">New DSAR</button>
-          </div>
-          ${DSARs.map(d=>`
-            <div style="padding:12px 0;border-bottom:1px solid var(--border)">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                <div>
-                  <span class="mono" style="color:var(--brand);font-size:11.5px;font-weight:700">${d.id}</span>
-                  <span style="margin-left:10px;font-size:12.5px;font-weight:700">${d.subject}</span>
-                  <span style="margin-left:8px;font-size:11px;color:var(--ink4)">${d.type}</span>
-                </div>
-                <span class="badge b-${d.responded?'active':d.daysLeft<5?'failed':'pending'}">${d.responded?'Completed':d.daysLeft<5?'Due soon':'In Progress'}</span>
-              </div>
-              <div style="display:flex;gap:10px;margin-bottom:8px">
-                ${[
-                  {l:'Received',v:d.received},
-                  {l:'Due',v:d.due},
-                  {l:'Days left',v:d.daysLeft>0?d.daysLeft+' days':d.responded?'Completed':'Overdue',color:d.daysLeft<5&&!d.responded?'var(--red)':''},
-                ].map(s=>`<div style="font-size:11.5px"><span style="color:var(--ink4)">${s.l}: </span><strong${s.color?` style="color:${s.color}"`:''}>${s.v}</strong></div>`).join('')}
-              </div>
-              <div style="display:flex;gap:8px">
-                ${[
-                  {l:'Acknowledged',done:d.ackDone,fn:`acknowledgeDs('${d.id}')`},
-                  {l:'Data extracted',done:d.extractDone,fn:`extractDs('${d.id}')`},
-                  {l:'Response sent',done:d.responded,fn:`respondDs('${d.id}')`},
-                ].map(step=>`<div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:${step.done?'var(--gr-bg)':'var(--bg)'};border:1px solid ${step.done?'var(--gr-bd)':'var(--border)'};cursor:${step.done?'default':'pointer'}" onclick="${step.done?'':step.fn}">
-                  <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="${step.done?'var(--gr)':'var(--ink4)'}" stroke-width="2.5"><path d="${step.done?'M4 10l5 5 7-7':'M10 4v12'}" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  <span style="font-size:11px;font-weight:600;color:${step.done?'var(--gr)':'var(--ink4)'}">${step.l}</span>
-                </div>`).join('')}
-              </div>
-            </div>`).join('')}
+          <div class="card-hdr"><span>DSAR Tracker</span></div>
+          <div id="dsarOpenList"><div style="padding:12px 0;color:var(--ink4);font-size:12px">Loading…</div></div>
         </div>
       </div>
       <div class="card">
         <div class="card-hdr">Submit DSAR</div>
         <div class="form-group"><label class="form-label">Request Type</label>
-          <select class="form-input">
-            <option>Access — provide copy of all personal data</option>
-            <option>Correction — correct inaccurate data</option>
-            <option>Deletion — right to erasure</option>
-            <option>Objection — object to processing</option>
+          <select class="form-input" id="dsarType">
+            <option value="access">Access — provide copy of all personal data</option>
+            <option value="correction">Correction — correct inaccurate data</option>
+            <option value="deletion">Deletion — right to erasure</option>
           </select>
         </div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" placeholder="Legal name"></div>
+          <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="dsarSubjectName" placeholder="Legal name"></div>
           <div class="form-group"><label class="form-label">SA ID Number</label><input class="form-input mono" placeholder="8901010000000"></div>
         </div>
-        <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" placeholder="subject@example.co.za" type="email"></div>
+        <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" id="dsarSubjectEmail" placeholder="subject@example.co.za" type="email"></div>
         <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" style="height:70px" placeholder="Describe the specific data you are requesting…"></textarea></div>
         <div class="form-group"><label class="form-label">Identity Document</label>
           <div style="border:2px dashed var(--border2);border-radius:var(--r2);padding:12px;text-align:center;cursor:pointer;font-size:12px;color:var(--ink4)">
@@ -21086,17 +21215,14 @@ function buildEnhancedDSAR(el){
             Upload certified ID copy
           </div>
         </div>
-        <button class="btn btn-primary btn-sm" style="width:100%" onclick="submitEnhancedDSAR()">Submit DSAR</button>
+        <button class="btn btn-primary btn-sm" style="width:100%" onclick="submitDSAR()">Submit DSAR</button>
         <div style="font-size:11px;color:var(--ink4);margin-top:8px;text-align:center">
           We will acknowledge within 3 business days · 30-day response window (POPIA)
         </div>
       </div>
     </div>`;
+  await refreshDsarList();
 }
-function acknowledgeDs(id){ toast(`DSAR ${id} acknowledged — email sent to subject`,'success'); }
-function extractDs(id){ toast(`Data extraction queued for ${id} — Lambda triggered`,'info'); }
-function respondDs(id){ toast(`Response sent for ${id} — SES email dispatched`,'success'); }
-function submitEnhancedDSAR(){ toast(`DSAR-00${Math.floor(43+Math.random()*10)} created · Acknowledgement email sent within 3 business days`,'success',5000); }
 
 
 
