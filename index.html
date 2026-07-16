@@ -9473,7 +9473,8 @@ async function renderWebhooksPage(){
     : deliveries.map(l=>`
     <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
       <span style="font-family:var(--mono);font-size:11px;flex:1;color:var(--ink)">${l.event}</span>
-      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${l.status==='success'?'var(--gr)':'var(--red)'}">${l.responseCode ?? 'timeout'}</span>
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${l.status==='success'?'var(--gr)':l.status==='pending'?'var(--amb)':'var(--red)'}">${l.status==='pending'?'queued':(l.responseCode ?? 'timeout')}</span>
+      <span style="font-size:10px;color:var(--ink5)">${l.status==='dead_letter'?'dead-letter':'try '+(l.attempts||0)}</span>
       <span style="font-size:11px;color:var(--ink4)">${l.durationMs!=null?l.durationMs+'ms':'—'}</span>
       <span style="font-size:10.5px;color:var(--ink5)">${new Date(l.time).toLocaleString('en-ZA',{hour12:false})}</span>
     </div>`).join('');

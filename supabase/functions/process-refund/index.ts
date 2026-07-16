@@ -9,6 +9,18 @@ function json(body: unknown, status = 200) {
 
 const FOUR_EYES_THRESHOLD_CENTS = 500_000; // R5,000 — matches the Refund Policy shown in the UI
 
+// Queues an event for every enabled endpoint subscribed to it; the
+// cron-driven webhook-dispatch worker sends and retries the deliveries.
+async function enqueueWebhookEvent(admin: any, eventType: string, data: Record<string, unknown>) {
+  const { data: endpoints } = await admin.from('webhook_endpoints').select('id, events').eq('enabled', true);
+  const targets = (endpoints ?? []).filter((e: any) => (e.events ?? []).includes(eventType));
+  if (!targets.length) return;
+  const payload = { event: eventType, id: crypto.randomUUID(), created_at: new Date().toISOString(), data };
+  await admin.from('webhook_deliveries').insert(
+    targets.map((e: any) => ({ endpoint_id: e.id, event_type: eventType, payload, status: 'pending' })),
+  );
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
@@ -97,6 +109,17 @@ Deno.serve(async (req: Request) => {
     entity_id: data.ref,
     metadata: { transaction_ref: txn.ref, amount: requestedCents / 100, type, status: data.status, reason: data.reason, ip },
   });
+
+  // 4-eyes-pending refunds emit no event until they are approved.
+  if (status === 'success') {
+    await enqueueWebhookEvent(admin, 'refund.success', {
+      ref: data.ref,
+      transaction_ref: txn.ref,
+      amount_cents: requestedCents,
+      currency: 'ZAR',
+      merchant_id: txn.merchant_id,
+    });
+  }
 
   const responseBody = {
     ref: data.ref,
