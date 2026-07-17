@@ -7,6 +7,18 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// Queues an event for every enabled endpoint subscribed to it; the
+// cron-driven webhook-dispatch worker sends and retries the deliveries.
+async function enqueueWebhookEvent(admin: any, eventType: string, data: Record<string, unknown>) {
+  const { data: endpoints } = await admin.from('webhook_endpoints').select('id, events').eq('enabled', true);
+  const targets = (endpoints ?? []).filter((e: any) => (e.events ?? []).includes(eventType));
+  if (!targets.length) return;
+  const payload = { event: eventType, id: crypto.randomUUID(), created_at: new Date().toISOString(), data };
+  await admin.from('webhook_deliveries').insert(
+    targets.map((e: any) => ({ endpoint_id: e.id, event_type: eventType, payload, status: 'pending' })),
+  );
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
@@ -60,6 +72,13 @@ Deno.serve(async (req: Request) => {
       entity_type: 'settlement',
       entity_id: settlementId,
       metadata: { merchant_id: data.merchant_id, net_amount_cents: data.net_amount_cents, ip },
+    });
+
+    await enqueueWebhookEvent(admin, 'settlement.paid', {
+      id: data.id,
+      merchant_id: data.merchant_id,
+      net_amount_cents: data.net_amount_cents,
+      currency: 'ZAR',
     });
 
     return json({ id: data.id, status: 'paid' });

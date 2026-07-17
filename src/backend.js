@@ -450,6 +450,7 @@ function mapDeliveryRow(row) {
     url: row.webhook_endpoints?.url || '—',
     event: row.event_type,
     status: row.status,
+    attempts: row.attempts,
     responseCode: row.response_code,
     durationMs: row.duration_ms,
     time: row.last_attempt_at || row.created_at,
