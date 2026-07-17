@@ -255,7 +255,7 @@ async function revokeApiKey(keyId) {
 async function fetchReconciliationRows(limit = 2000) {
   const { data, error } = await supabase
     .from('transactions')
-    .select('type, amount_cents, status, settlement_id, created_at')
+    .select('type, amount_cents, status, settlement_id, three_ds_status, created_at')
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
