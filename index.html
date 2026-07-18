@@ -7056,11 +7056,11 @@ html.dark .hdr-ai-btn {
     </div>
   </div>
   <div class="pad">
-    <div class="g4 gap14">
-      <div class="stat green"><div class="stat-lbl">Active Subscriptions</div><div class="stat-val">528</div><div class="stat-meta"><span class="d-up">+14</span> this month</div></div>
-      <div class="stat blue"><div class="stat-lbl">MRR</div><div class="stat-val">R 284,720</div><div class="stat-meta"><span class="d-up">+8.2%</span> vs last month</div></div>
-      <div class="stat amber"><div class="stat-lbl">Failed This Cycle</div><div class="stat-val">18</div><div class="stat-meta">In dunning · R 14,200 at risk</div></div>
-      <div class="stat red"><div class="stat-lbl">Churn Rate (30d)</div><div class="stat-val">2.1%</div><div class="stat-meta">11 cancellations</div></div>
+    <div class="g4 gap14" id="subStatGrid">
+      <div class="stat green"><div class="stat-lbl">Active Subscriptions</div><div class="stat-val">—</div></div>
+      <div class="stat blue"><div class="stat-lbl">MRR</div><div class="stat-val" style="font-size:18px">—</div><div class="stat-meta">Monthly-equivalent of active plans</div></div>
+      <div class="stat amber"><div class="stat-lbl">In Dunning</div><div class="stat-val">—</div><div class="stat-meta">Past-due, retrying daily</div></div>
+      <div class="stat red"><div class="stat-lbl">Cancelled</div><div class="stat-val">—</div></div>
     </div>
     <div class="tab-row" id="subTabRow">
       <button class="tab active" onclick="subTab('plans')">Billing Plans</button>
@@ -7078,26 +7078,52 @@ html.dark .hdr-ai-btn {
     <div class="modal-hdr"><h3>Create Billing Plan</h3><button class="close-x" onclick="closeModal('newPlanModal')"><svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4l12 12M16 4L4 16" stroke-linecap="round"/></svg></button></div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Plan Name</label><input class="form-input" placeholder="Pro Monthly"></div>
-        <div class="form-group"><label class="form-label">Plan Code</label><input class="form-input mono" placeholder="PRO-MTH"></div>
+        <div class="form-group"><label class="form-label">Plan Name</label><input class="form-input" id="planName" placeholder="Pro Monthly"></div>
+        <div class="form-group"><label class="form-label">Plan Code</label><input class="form-input mono" id="planCode" placeholder="PRO-MTH"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Amount (ZAR)</label><input class="form-input mono" placeholder="899.00"></div>
-        <div class="form-group"><label class="form-label">Billing Frequency</label><select class="form-input"><option>Monthly</option><option>Weekly</option><option>Bi-monthly</option><option>Quarterly</option><option>Annually</option></select></div>
+        <div class="form-group"><label class="form-label">Amount (ZAR)</label><input class="form-input mono" id="planAmount" placeholder="899.00"></div>
+        <div class="form-group"><label class="form-label">Billing Frequency</label>
+          <select class="form-input" id="planFrequency">
+            <option value="monthly">Monthly</option>
+            <option value="weekly">Weekly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="annually">Annually</option>
+          </select>
+        </div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Trial Period</label><select class="form-input"><option>None</option><option>7 days</option><option>14 days</option><option>30 days</option></select></div>
-        <div class="form-group"><label class="form-label">Payment Rail</label><select class="form-input"><option>Card (Vault token)</option><option>DebiCheck</option><option>NAEDO</option><option>EFT Debit</option></select></div>
-      </div>
-      <div class="form-section-title">Dunning Settings</div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Max Retries</label><input class="form-input mono" value="3"></div>
-        <div class="form-group"><label class="form-label">Suspend After</label><select class="form-input"><option>Final retry fails</option><option>After 7 days unpaid</option><option>After 14 days unpaid</option></select></div>
+      <div style="font-size:11.5px;color:var(--ink4);background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px">
+        Dunning is fixed platform-wide: a failed charge retries daily and the subscription cancels after 4 consecutive failures.
       </div>
     </div>
     <div class="modal-ft">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('newPlanModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="closeModal('newPlanModal')">Create Plan</button>
+      <button class="btn btn-primary btn-sm" onclick="createPlanAction()">Create Plan</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Subscription Modal -->
+<div class="modal-ov" id="newSubModal">
+  <div class="modal" style="width:520px">
+    <div class="modal-hdr"><h3>New Subscription</h3><button class="close-x" onclick="closeModal('newSubModal')"><svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4l12 12M16 4L4 16" stroke-linecap="round"/></svg></button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Plan</label><select class="form-input" id="subPlan"></select></div>
+        <div class="form-group"><label class="form-label">Merchant</label><select class="form-input" id="subMerchant"></select></div>
+      </div>
+      <div class="form-group"><label class="form-label">Customer Name</label><input class="form-input" id="subCustomer" placeholder="Thabo Khumalo"></div>
+      <div class="form-section-title">Card (tokenised once, then charged on file)</div>
+      <div class="form-group"><label class="form-label">Card Number</label><input class="form-input mono" id="subCard" placeholder="4111 1111 1111 1111"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Expiry (MM/YY)</label><input class="form-input mono" id="subExpiry" placeholder="12/29"></div>
+        <div class="form-group"><label class="form-label">CVV</label><input class="form-input mono" id="subCvv" placeholder="123" maxlength="4"></div>
+      </div>
+      <div style="font-size:11.5px;color:var(--ink4)">First charge lands on the next billing run (within 30 minutes), then per plan frequency.</div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('newSubModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="createSubscriptionAction()">Create Subscription</button>
     </div>
   </div>
 </div>
@@ -25478,21 +25504,154 @@ function buildDevPortal(el){
   };
 
   // ══ subTab ════════════════════════════════════════════════════
-  const _baseSubTab = subTab;
-  window.subTab = function(t){
+  // Recurring billing — live data. MRR is the monthly-equivalent sum of
+  // active subscriptions' plan amounts.
+  const SUB_FREQ_MONTHLY = { weekly: 52/12, monthly: 1, quarterly: 1/3, annually: 1/12 };
+  const _subFmtR = (c)=>'R '+(c/100).toLocaleString('en-ZA',{minimumFractionDigits:2});
+
+  async function _subData(){
+    const db = await _waitForSpDb();
+    const [plans, subs] = await Promise.all([db.fetchPlans(), db.fetchSubscriptions()]);
+    const grid = getEl('subStatGrid');
+    if(grid){
+      const vals = grid.querySelectorAll('.stat-val');
+      const active = subs.filter(s=>s.status==='active');
+      const mrr = active.reduce((sum,s)=>sum + (s.billing_plans?.amount_cents||0) * (SUB_FREQ_MONTHLY[s.billing_plans?.frequency]||1), 0);
+      if(vals[0]) vals[0].textContent = active.length;
+      if(vals[1]) vals[1].textContent = _subFmtR(mrr);
+      if(vals[2]) vals[2].textContent = subs.filter(s=>s.status==='past_due').length;
+      if(vals[3]) vals[3].textContent = subs.filter(s=>s.status==='cancelled').length;
+    }
+    return { plans, subs };
+  }
+
+  function _subRows(el, subs, emptyMsg){
+    el.innerHTML = `<div class="tbl-wrap"><table>
+      <thead><tr><th>ID</th><th>Customer</th><th>Plan</th><th>Merchant</th><th>Amount</th><th>Status</th><th>Fails</th><th>Next Billing</th><th></th></tr></thead>
+      <tbody>${subs.length===0?`<tr><td colspan="9" style="text-align:center;color:var(--ink4);padding:16px">${emptyMsg}</td></tr>`:subs.map(s=>`<tr>
+        <td class="mono" style="font-size:11px;color:var(--brand)">${s.id}</td>
+        <td style="font-weight:600">${s.customer_name}</td>
+        <td style="font-size:12px">${s.billing_plans?.name||s.plan_id} · ${s.billing_plans?.frequency||''}</td>
+        <td style="font-size:12px">${s.merchants?.name||s.merchant_id}</td>
+        <td class="num">${_subFmtR(s.billing_plans?.amount_cents||0)}</td>
+        <td><span class="badge b-${s.status==='active'?'active':s.status==='past_due'?'pending':'failed'}">${s.status.replace('_',' ')}</span></td>
+        <td class="mono" style="color:${s.failed_attempts>0?'var(--amb)':'var(--ink4)'}">${s.failed_attempts}</td>
+        <td style="font-size:11px;color:var(--ink4);font-family:var(--mono)">${s.status==='cancelled'?'—':new Date(s.next_billing_at).toLocaleString('en-ZA',{hour12:false}).slice(0,17)}</td>
+        <td>${s.status!=='cancelled'?`<button class="btn btn-danger btn-xs" onclick="cancelSubscriptionAction('${s.id}',${JSON.stringify(s.customer_name)})">Cancel</button>`:''}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  }
+
+  window.subTab = async function(t){
     setActiveTab('subTabRow', t);
     const el = getEl('subContent');
-    switch(t){
-      case 'dunning': if(el && typeof buildDunningContent==='function') buildDunningContent(el); break;
-      default:        try{ _baseSubTab(t); }catch(e){ console.warn('subTab:',e); }
+    if(!el) return;
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Loading…</div>`;
+    let data;
+    try{ data = await _subData(); }
+    catch(e){ el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Couldn't load billing data — check your connection and retry.</div>`; return; }
+    const { plans, subs } = data;
+
+    if(t==='plans'){
+      el.innerHTML = `<div class="tbl-wrap"><table>
+        <thead><tr><th>Plan</th><th>Code</th><th>Amount</th><th>Frequency</th><th>Subscribers</th><th>Status</th><th></th></tr></thead>
+        <tbody>${plans.length===0?`<tr><td colspan="7" style="text-align:center;color:var(--ink4);padding:16px">No plans yet — create one with New Plan.</td></tr>`:plans.map(p=>`<tr>
+          <td style="font-weight:600">${p.name}</td>
+          <td class="mono" style="font-size:11px">${p.code}</td>
+          <td class="num">${_subFmtR(p.amount_cents)}</td>
+          <td style="font-size:12px">${p.frequency}</td>
+          <td class="mono">${subs.filter(s=>s.plan_id===p.id && s.status!=='cancelled').length}</td>
+          <td><span class="badge b-${p.status==='active'?'active':'failed'}">${p.status}</span></td>
+          <td>${p.status==='active'?`<button class="btn btn-ghost btn-xs" onclick="archivePlanAction('${p.id}',${JSON.stringify(p.name)})">Archive</button>`:''}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+      <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="openNewSubModal()">+ New Subscription</button>`;
+    } else if(t==='subscribers'){
+      _subRows(el, subs, 'No subscriptions yet.');
+      el.insertAdjacentHTML('beforeend', `<button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="openNewSubModal()">+ New Subscription</button>`);
+    } else if(t==='dunning'){
+      const dunning = subs.filter(s=>s.status==='past_due' || (s.status==='cancelled' && s.failed_attempts>0));
+      el.innerHTML = `<div style="background:var(--amb-bg);border:1px solid var(--amb-bd);border-radius:var(--r2);padding:10px 14px;font-size:12.5px;color:var(--amb);margin-bottom:12px">
+        Failed charges retry daily; the 4th consecutive failure cancels the subscription. Retries run automatically every 30 minutes on the billing worker.
+      </div><div id="dunningRows"></div>`;
+      _subRows(getEl('dunningRows'), dunning, 'Nothing in dunning — all subscriptions are collecting cleanly.');
+    } else if(t==='mandates'){
+      el.innerHTML = `<div class="card"><div class="card-hdr">DebiCheck Mandates</div><div style="padding:12px;font-size:12.5px;color:var(--ink4)">DebiCheck mandate management requires the BankservAfrica DebiCheck rail (Track D). Card-on-file subscriptions above are live.</div></div>`;
     }
-    setTimeout(()=>{
-      const sr=getEl('subTabRow'); if(!sr) return;
-      if(!sr.querySelector("[onclick*=\"'dunning'\"]")){
-        const b=document.createElement('button');b.className='tab';
-        b.setAttribute('onclick',"subTab('dunning')");b.textContent='Dunning';sr.appendChild(b);
-      }
-    }, 60);
+  };
+
+  window.openNewSubModal = async function(){
+    try{
+      const db = await _waitForSpDb();
+      const [plans, merchants] = await Promise.all([db.fetchPlans(), db.fetchMerchants()]);
+      const planSel = document.getElementById('subPlan');
+      const merchSel = document.getElementById('subMerchant');
+      if(planSel) planSel.innerHTML = plans.filter(p=>p.status==='active').map(p=>`<option value="${p.id}">${p.name} — ${_subFmtR(p.amount_cents)}/${p.frequency}</option>`).join('');
+      if(merchSel) merchSel.innerHTML = merchants.filter(m=>m.status==='active').map(m=>`<option value="${m.id}">${m.id} — ${m.name}</option>`).join('');
+      if(planSel && !planSel.innerHTML){ toast('Create an active billing plan first','warn'); return; }
+      openModal('newSubModal');
+    }catch(e){ toast('Couldn\'t load plans/merchants: '+(e?.message||e),'warn',4000); }
+  };
+
+  window.createPlanAction = async function(){
+    const name = document.getElementById('planName')?.value?.trim();
+    const code = document.getElementById('planCode')?.value?.trim();
+    const amount = parseFloat(document.getElementById('planAmount')?.value||'');
+    const frequency = document.getElementById('planFrequency')?.value||'monthly';
+    if(!name || !code || !Number.isFinite(amount) || amount<=0){ toast('Enter a plan name, code, and amount','warn'); return; }
+    try{
+      const db = await _waitForSpDb();
+      const res = await db.createPlan(name, code, Math.round(amount*100), frequency);
+      if(res?.error){ toast(res.error,'warn',4000); return; }
+      closeModal('newPlanModal');
+      toast(`Plan ${res.id} created — ${name}`,'success',4000);
+      ['planName','planCode','planAmount'].forEach(id=>{ const f=document.getElementById(id); if(f) f.value=''; });
+      subTab('plans');
+    }catch(e){ toast('Plan creation failed: '+(e?.message||e),'warn',4000); }
+  };
+
+  window.archivePlanAction = async function(planId, name){
+    if(!confirm(`Archive ${name}? Existing subscriptions keep billing; no new ones can use it.`)) return;
+    try{
+      const db = await _waitForSpDb();
+      const res = await db.archivePlan(planId);
+      if(res?.error){ toast(res.error,'warn',4000); return; }
+      toast(`${name} archived`,'success',3000);
+      subTab('plans');
+    }catch(e){ toast('Archive failed: '+(e?.message||e),'warn',4000); }
+  };
+
+  window.createSubscriptionAction = async function(){
+    const planId = document.getElementById('subPlan')?.value;
+    const merchantId = document.getElementById('subMerchant')?.value;
+    const customer = document.getElementById('subCustomer')?.value?.trim();
+    const card = (document.getElementById('subCard')?.value||'').replace(/\s/g,'');
+    const [mStr,yStr] = (document.getElementById('subExpiry')?.value||'').split('/').map(s=>s?.trim());
+    const cvv = document.getElementById('subCvv')?.value?.trim();
+    const expMonth = parseInt(mStr,10), expYear = yStr?2000+parseInt(yStr,10):NaN;
+    if(!planId || !merchantId || !customer || !card || !cvv || !expMonth || !expYear){ toast('Complete all fields (expiry as MM/YY)','warn'); return; }
+    try{
+      const db = await _waitForSpDb();
+      const tok = await db.tokenizeCard({ pan: card, expMonth, expYear, cvv, merchant: merchantId });
+      if(tok?.error){ toast(tok.error,'warn',4000); return; }
+      const res = await db.createSubscription(planId, merchantId, customer, tok.token);
+      if(res?.error){ toast(res.error,'warn',4000); return; }
+      closeModal('newSubModal');
+      toast(`${res.id} created — first charge on the next billing run`,'success',5000);
+      ['subCustomer','subCard','subExpiry','subCvv'].forEach(id=>{ const f=document.getElementById(id); if(f) f.value=''; });
+      subTab('subscribers');
+    }catch(e){ toast('Subscription failed: '+(e?.message||e),'warn',4000); }
+  };
+
+  window.cancelSubscriptionAction = async function(subscriptionId, customer){
+    if(!confirm(`Cancel ${subscriptionId} (${customer})? Billing stops immediately.`)) return;
+    try{
+      const db = await _waitForSpDb();
+      const res = await db.cancelSubscription(subscriptionId);
+      if(res?.error){ toast(res.error,'warn',4000); return; }
+      toast(`${subscriptionId} cancelled`,'warn',3000);
+      subTab('subscribers');
+    }catch(e){ toast('Cancel failed: '+(e?.message||e),'warn',4000); }
   };
 
   // ══ hsmTab ════════════════════════════════════════════════════

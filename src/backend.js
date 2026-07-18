@@ -262,6 +262,47 @@ async function fetchReconciliationRows(limit = 2000) {
   return data;
 }
 
+// ── Recurring billing ───────────────────────────────────────────
+
+async function fetchPlans() {
+  const { data, error } = await supabase.from('billing_plans').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+async function fetchSubscriptions() {
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select('*, billing_plans(name, amount_cents, frequency), merchants(name)')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+async function createPlan(name, code, amountCents, frequency) {
+  const { data, error } = await supabase.functions.invoke('manage-subscription', { body: { action: 'createPlan', name, code, amountCents, frequency } });
+  if (error) throw error;
+  return data;
+}
+
+async function archivePlan(planId) {
+  const { data, error } = await supabase.functions.invoke('manage-subscription', { body: { action: 'archivePlan', planId } });
+  if (error) throw error;
+  return data;
+}
+
+async function createSubscription(planId, merchantId, customerName, paymentMethodToken) {
+  const { data, error } = await supabase.functions.invoke('manage-subscription', { body: { action: 'createSubscription', planId, merchantId, customerName, paymentMethodToken } });
+  if (error) throw error;
+  return data;
+}
+
+async function cancelSubscription(subscriptionId) {
+  const { data, error } = await supabase.functions.invoke('manage-subscription', { body: { action: 'cancelSubscription', subscriptionId } });
+  if (error) throw error;
+  return data;
+}
+
 // ── Staff user management ───────────────────────────────────────
 
 async function fetchStaff() {
@@ -592,6 +633,12 @@ window.SP_DB = {
   submitFicReport,
   fetchClientErrors,
   fetchReconciliationRows,
+  fetchPlans,
+  fetchSubscriptions,
+  createPlan,
+  archivePlan,
+  createSubscription,
+  cancelSubscription,
   fetchStaff,
   fetchRoles,
   inviteUser,
