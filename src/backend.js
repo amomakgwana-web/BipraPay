@@ -303,6 +303,45 @@ async function cancelSubscription(subscriptionId) {
   return data;
 }
 
+// ── Bulk payouts ────────────────────────────────────────────────
+
+async function fetchPayoutBatches() {
+  const { data, error } = await supabase
+    .from('payout_batches')
+    .select('*, maker:profiles!payout_batches_created_by_fkey(name), checker:profiles!payout_batches_approved_by_fkey(name)')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+async function fetchPayoutItems(batchId) {
+  const { data, error } = await supabase
+    .from('payout_items')
+    .select('*')
+    .eq('batch_id', batchId)
+    .order('beneficiary');
+  if (error) throw error;
+  return data;
+}
+
+async function createPayoutBatch(name, items) {
+  const { data, error } = await supabase.functions.invoke('manage-payouts', { body: { action: 'createBatch', name, items } });
+  if (error) throw error;
+  return data;
+}
+
+async function approvePayoutBatch(batchId) {
+  const { data, error } = await supabase.functions.invoke('manage-payouts', { body: { action: 'approveBatch', batchId } });
+  if (error) throw error;
+  return data;
+}
+
+async function rejectPayoutBatch(batchId, reason) {
+  const { data, error } = await supabase.functions.invoke('manage-payouts', { body: { action: 'rejectBatch', batchId, reason } });
+  if (error) throw error;
+  return data;
+}
+
 // ── Staff user management ───────────────────────────────────────
 
 async function fetchStaff() {
@@ -639,6 +678,11 @@ window.SP_DB = {
   archivePlan,
   createSubscription,
   cancelSubscription,
+  fetchPayoutBatches,
+  fetchPayoutItems,
+  createPayoutBatch,
+  approvePayoutBatch,
+  rejectPayoutBatch,
   fetchStaff,
   fetchRoles,
   inviteUser,

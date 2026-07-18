@@ -7151,8 +7151,7 @@ html.dark .hdr-ai-btn {
     </div>
     <div class="tab-row" id="bulkTabRow">
       <button class="tab active" onclick="bulkTab('batches')">Batches</button>
-      <button class="tab" onclick="bulkTab('pending')">Pending Approval (2)</button>
-      <button class="tab" onclick="bulkTab('failed')">Failed Payouts</button>
+      <button class="tab" onclick="bulkTab('pending')">Pending Approval</button>
       <button class="tab" onclick="bulkTab('template')">CSV Template</button>
     </div>
     <div id="bulkContent"></div>
@@ -7164,23 +7163,19 @@ html.dark .hdr-ai-btn {
   <div class="modal" style="width:540px">
     <div class="modal-hdr"><h3>New Bulk Payout Batch</h3><button class="close-x" onclick="closeModal('bulkUploadModal')"><svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4l12 12M16 4L4 16" stroke-linecap="round"/></svg></button></div>
     <div class="modal-body">
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Batch Name</label><input class="form-input" placeholder="May Payroll 2026"></div>
-        <div class="form-group"><label class="form-label">Payment Rail</label><select class="form-input"><option>RTC (Instant)</option><option>EFT (Same-day)</option><option>SWIFT (International)</option></select></div>
-      </div>
-      <div class="form-group"><label class="form-label">Source Account</label><select class="form-input"><option>FNB Operating — 62••••4821</option><option>Standard Bank — 00••••1920</option></select></div>
+      <div class="form-group"><label class="form-label">Batch Name</label><input class="form-input" id="bulkName" placeholder="May Payroll 2026"></div>
       <div class="form-group"><label class="form-label">Upload CSV</label>
-        <div style="border:2px dashed var(--border2);border-radius:var(--r2);padding:20px;text-align:center;color:var(--ink4);cursor:pointer" onclick="this.style.borderColor='var(--brand)'">
-          <svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 8px;display:block;color:var(--ink5)"><path d="M4 14v2a2 2 0 002 2h8a2 2 0 002-2v-2M13 7l-3-3-3 3M10 4v8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <div style="font-size:12px;font-weight:600;color:var(--ink3);margin-bottom:3px">Drop CSV here or click to browse</div>
-          <div style="font-size:11px;color:var(--ink5)">name, account_number, bank_code, amount, reference</div>
-        </div>
+        <input type="file" id="bulkCsvFile" accept=".csv,text/csv" class="form-input" style="padding:8px" onchange="bulkCsvFileChosen(this)">
       </div>
-      <div style="background:var(--amb-bg);border:1px solid var(--amb-bd);border-radius:var(--r);padding:10px;font-size:12px;color:var(--amb)"><strong>Maker-checker required</strong> for batches &gt; R 100,000.</div>
+      <div class="form-group"><label class="form-label">…or paste rows</label>
+        <textarea class="form-input mono" id="bulkCsvText" style="height:110px;font-size:11.5px" placeholder="beneficiary, account_number, bank, amount, reference&#10;Thabo Khumalo, 62001234821, FNB, 1500.00, SAL-05&#10;Zanele Mokoena, 10023491920, Capitec, 2250.50, SAL-05"></textarea>
+      </div>
+      <div id="bulkPreview" style="font-size:12px;color:var(--ink4)"></div>
+      <div style="background:var(--amb-bg);border:1px solid var(--amb-bd);border-radius:var(--r);padding:10px;font-size:12px;color:var(--amb);margin-top:8px"><strong>Maker-checker:</strong> every batch needs approval by a different staff member before any money moves. Account numbers are stored masked (last 4 only).</div>
     </div>
     <div class="modal-ft">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('bulkUploadModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="closeModal('bulkUploadModal')">Upload & Validate</button>
+      <button class="btn btn-primary btn-sm" onclick="createBulkBatchAction()">Create Batch</button>
     </div>
   </div>
 </div>
@@ -20097,29 +20092,150 @@ function buildRatioTab(el){
 // ─── SUBSCRIPTIONS OVERHAUL ────────────────────────────────────
 // ─── BULK PAYOUTS OVERHAUL ─────────────────────────────────────
 const _origBulkTabFull = bulkTab;
-window.bulkTab = function(t){
-  _origBulkTabFull(t);
-  setTimeout(()=>{
-    const el=document.getElementById('bulkContent'); if(!el) return;
-    el.querySelectorAll('tbody tr').forEach(row=>{
-      const lastTd = row.cells[row.cells.length-1];
-      const statusCell = row.querySelector('.badge');
-      const status = statusCell?.textContent?.trim();
-      const id = row.cells[0]?.textContent?.trim();
-      if(lastTd && lastTd.querySelectorAll('button').length < 2){
-        lastTd.innerHTML = `<div style="display:flex;gap:3px">
-          <button class="btn btn-ghost btn-xs" onclick="toast('Batch ${id} detail','info')">View</button>
-          ${status==='pending_approval'
-            ?`<button class="btn btn-success btn-xs" onclick="if(confirm('Approve batch?'))toast('Batch approved','success')">Approve</button>
-               <button class="btn btn-danger btn-xs" onclick="if(confirm('Reject batch?'))toast('Batch rejected','warn')">Reject</button>`
-            :''}
-          ${status==='processing'
-            ?`<button class="btn btn-ghost btn-xs" onclick="toast('Batch ${id} progress: 42%','info')">Progress</button>`
-            :''}
-        </div>`;
-      }
-    });
-  },60);
+// Bulk payouts — live data with real maker-checker enforcement server-side.
+const _bulkFmtR = (c)=>'R '+(c/100).toLocaleString('en-ZA',{minimumFractionDigits:2});
+
+function _bulkBatchTable(el, batches, emptyMsg){
+  el.innerHTML = `<div class="tbl-wrap"><table>
+    <thead><tr><th>Batch</th><th>Name</th><th>Items</th><th>Total</th><th>Maker</th><th>Checker</th><th>Status</th><th></th></tr></thead>
+    <tbody>${batches.length===0?`<tr><td colspan="8" style="text-align:center;color:var(--ink4);padding:16px">${emptyMsg}</td></tr>`:batches.map(b=>`<tr>
+      <td class="mono" style="font-size:11px;color:var(--brand)">${b.id}</td>
+      <td style="font-weight:600">${b.name}</td>
+      <td class="mono">${b.item_count}</td>
+      <td class="num">${_bulkFmtR(b.total_cents)}</td>
+      <td style="font-size:12px">${b.maker?.name||'—'}</td>
+      <td style="font-size:12px">${b.checker?.name||'—'}</td>
+      <td><span class="badge b-${b.status==='completed'?'success':b.status==='rejected'?'failed':'pending'}">${b.status.replace('_',' ')}</span></td>
+      <td><div style="display:flex;gap:3px">
+        <button class="btn btn-ghost btn-xs" onclick="viewPayoutBatch('${b.id}')">Items</button>
+        ${b.status==='pending_approval'?`
+          <button class="btn btn-success btn-xs" onclick="approvePayoutBatchAction('${b.id}',${JSON.stringify(b.name)})">Approve</button>
+          <button class="btn btn-danger btn-xs" onclick="rejectPayoutBatchAction('${b.id}',${JSON.stringify(b.name)})">Reject</button>`:''}
+      </div></td>
+    </tr>`).join('')}</tbody>
+  </table></div>
+  <div id="bulkItemsPanel" style="margin-top:12px"></div>`;
+}
+
+window.bulkTab = async function(t){
+  document.querySelectorAll('#bulkTabRow .tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('#bulkTabRow .tab').forEach(x=>{if(x.getAttribute('onclick')?.includes("'"+t+"'"))x.classList.add('active');});
+  const el = document.getElementById('bulkContent');
+  if(!el) return;
+
+  if(t==='template'){
+    el.innerHTML = `<div class="card"><div class="card-hdr">CSV Format</div>
+      <div class="code-block" style="font-size:11.5px">beneficiary, account_number, bank, amount, reference
+Thabo Khumalo, 62001234821, FNB, 1500.00, SAL-05
+Zanele Mokoena, 10023491920, Capitec, 2250.50, SAL-05</div>
+      <div style="font-size:12px;color:var(--ink4);margin-top:8px">A header row is optional (detected automatically). Amounts in rand. Max 500 rows per batch.</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Loading batches…</div>`;
+  let batches = [];
+  try{
+    const db = await _waitForSpDb();
+    batches = await db.fetchPayoutBatches();
+  }catch(e){
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Couldn't load payout batches — check your connection and retry.</div>`;
+    return;
+  }
+  if(t==='pending') _bulkBatchTable(el, batches.filter(b=>b.status==='pending_approval'), 'Nothing awaiting approval.');
+  else _bulkBatchTable(el, batches, 'No payout batches yet — create one with New Batch.');
+};
+
+window.viewPayoutBatch = async function(batchId){
+  const panel = document.getElementById('bulkItemsPanel');
+  if(!panel) return;
+  panel.innerHTML = `<div style="padding:12px;color:var(--ink4);font-size:12px">Loading items…</div>`;
+  try{
+    const db = await _waitForSpDb();
+    const items = await db.fetchPayoutItems(batchId);
+    panel.innerHTML = `<div class="card"><div class="card-hdr">${batchId} — ${items.length} item(s)</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Beneficiary</th><th>Bank</th><th>Account</th><th>Amount</th><th>Reference</th><th>Txn</th></tr></thead>
+        <tbody>${items.map(i=>`<tr>
+          <td style="font-weight:600">${i.beneficiary}</td>
+          <td style="font-size:12px">${i.bank||'—'}</td>
+          <td class="mono" style="font-size:11px">${i.account_masked}</td>
+          <td class="num">${_bulkFmtR(i.amount_cents)}</td>
+          <td class="mono" style="font-size:11px">${i.reference||'—'}</td>
+          <td class="mono" style="font-size:11px;color:${i.transaction_ref?'var(--gr)':'var(--ink4)'}">${i.transaction_ref||'not paid'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  }catch(e){ panel.innerHTML = `<div style="padding:12px;color:var(--ink4);font-size:12px">Couldn't load items.</div>`; }
+};
+
+function _parseBulkCsv(text){
+  const rows = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>l.split(',').map(c=>c.trim()));
+  if(rows.length && /beneficiary|account/i.test(rows[0].join(','))) rows.shift();
+  return rows.map(r=>({
+    beneficiary: r[0]||'',
+    account: r[1]||'',
+    bank: r[2]||'',
+    amountCents: Math.round(parseFloat(r[3]||'0')*100),
+    reference: r[4]||'',
+  }));
+}
+
+window.bulkCsvFileChosen = function(input){
+  const file = input.files?.[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const ta = document.getElementById('bulkCsvText');
+    if(ta) ta.value = String(reader.result||'');
+    const items = _parseBulkCsv(String(reader.result||''));
+    const pv = document.getElementById('bulkPreview');
+    if(pv) pv.textContent = `${items.length} row(s) · total ${_bulkFmtR(items.reduce((s,i)=>s+(i.amountCents||0),0))}`;
+  };
+  reader.readAsText(file);
+};
+
+window.createBulkBatchAction = async function(){
+  const name = document.getElementById('bulkName')?.value?.trim();
+  const text = document.getElementById('bulkCsvText')?.value||'';
+  if(!name){ toast('Enter a batch name','warn'); return; }
+  const items = _parseBulkCsv(text);
+  if(!items.length){ toast('Add at least one payout row (CSV upload or paste)','warn'); return; }
+  const bad = items.findIndex(i=>!i.beneficiary || !i.account || !Number.isInteger(i.amountCents) || i.amountCents<=0);
+  if(bad>=0){ toast(`Row ${bad+1} is invalid — needs beneficiary, account, and a positive amount`,'warn',4000); return; }
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.createPayoutBatch(name, items);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    closeModal('bulkUploadModal');
+    toast(`${res.id} created — ${res.item_count} item(s), ${_bulkFmtR(res.total_cents)} · awaiting approval by another staff member`,'success',5000);
+    const nameEl=document.getElementById('bulkName'); if(nameEl) nameEl.value='';
+    const ta=document.getElementById('bulkCsvText'); if(ta) ta.value='';
+    bulkTab('batches');
+  }catch(e){ toast('Batch creation failed: '+(e?.message||e),'warn',4000); }
+};
+
+window.approvePayoutBatchAction = async function(batchId, name){
+  if(!confirm(`Approve ${name}? This immediately pays every item in the batch.`)) return;
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.approvePayoutBatch(batchId);
+    if(res?.error){ toast(res.error,'warn',5000); return; }
+    toast(`${batchId} approved — payouts processed`,'success',4000);
+    bulkTab('batches');
+  }catch(e){ toast('Approval failed: '+(e?.message||e),'warn',5000); }
+};
+
+window.rejectPayoutBatchAction = async function(batchId, name){
+  const reason = prompt(`Reason for rejecting ${name} (optional):`);
+  if(reason===null) return;
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.rejectPayoutBatch(batchId, reason||null);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    toast(`${batchId} rejected`,'warn',3000);
+    bulkTab('batches');
+  }catch(e){ toast('Rejection failed: '+(e?.message||e),'warn',4000); }
 };
 
 
