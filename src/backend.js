@@ -424,6 +424,49 @@ async function signIn(email, password) {
   return { data, error };
 }
 
+async function signInWithOAuth(provider) {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: { redirectTo: window.location.origin },
+  });
+  return { data, error };
+}
+
+async function signInWithSSO(domain) {
+  const { data, error } = await supabase.auth.signInWithSSO({
+    domain,
+    options: { redirectTo: window.location.origin },
+  });
+  return { data, error };
+}
+
+async function requestAccess(payload) {
+  const { data, error } = await supabase.functions.invoke('request-access', { body: payload });
+  if (error) throw error;
+  return data;
+}
+
+async function fetchAccessRequests() {
+  const { data, error } = await supabase
+    .from('access_requests')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+async function approveAccessRequest(requestId, roleId) {
+  const { data, error } = await supabase.functions.invoke('manage-user', { body: { action: 'approveAccessRequest', requestId, roleId } });
+  if (error) throw error;
+  return data;
+}
+
+async function rejectAccessRequest(requestId, reason) {
+  const { data, error } = await supabase.functions.invoke('manage-user', { body: { action: 'rejectAccessRequest', requestId, reason } });
+  if (error) throw error;
+  return data;
+}
+
 async function listMfaFactors() {
   const { data, error } = await supabase.auth.mfa.listFactors();
   if (error) throw error;
@@ -645,6 +688,12 @@ window.SP_DB = {
   subscribeRefunds,
   subscribeAuditLog,
   signIn,
+  signInWithOAuth,
+  signInWithSSO,
+  requestAccess,
+  fetchAccessRequests,
+  approveAccessRequest,
+  rejectAccessRequest,
   listMfaFactors,
   challengeMfa,
   verifyMfa,
