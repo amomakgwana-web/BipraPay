@@ -2444,8 +2444,40 @@ html.dark .tab-row .tab.active { background: var(--bg3); }
   flex-direction:column;gap:0;
 }
 .auth-card {
-  width:380px;background:var(--white);border:1px solid var(--border);
+  width:400px;max-height:88vh;overflow-y:auto;
+  background:var(--white);border:1px solid var(--border);
   border-radius:16px;padding:36px;box-shadow:0 8px 40px rgba(11,15,26,.12);
+}
+.auth-switch {
+  display:flex;background:var(--bg2);border-radius:10px;padding:3px;margin-bottom:24px;
+}
+.auth-switch-tab {
+  flex:1;border:none;background:none;padding:8px 4px;border-radius:8px;
+  font-size:12.5px;font-weight:700;color:var(--ink4);cursor:pointer;transition:.12s;
+  font-family:var(--font);
+}
+.auth-switch-tab.active { background:var(--white);color:var(--ink);box-shadow:0 1px 4px rgba(11,15,26,.1); }
+.auth-or {
+  display:flex;align-items:center;gap:10px;margin:16px 0 14px;color:var(--ink5);font-size:11.5px;
+}
+.auth-or::before,.auth-or::after { content:'';flex:1;height:1px;background:var(--border); }
+.auth-oauth-row { display:flex;gap:10px;margin-bottom:12px; }
+.auth-oauth-btn {
+  flex:1;height:42px;border:1.5px solid var(--border);border-radius:10px;background:var(--white);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer;transition:.12s;font-family:var(--font);
+}
+.auth-oauth-btn:hover { border-color:var(--ink4);background:var(--bg2); }
+.auth-sso-link {
+  width:100%;background:none;border:none;color:var(--brand);font-size:12.5px;font-weight:600;
+  cursor:pointer;padding:6px 0;font-family:var(--font);
+}
+.auth-btn.ghost {
+  background:var(--white);color:var(--ink);border:1.5px solid var(--border);box-shadow:none;
+}
+.auth-btn.ghost:hover { background:var(--bg2);transform:none;box-shadow:none; }
+.auth-req-note {
+  font-size:11px;color:var(--ink4);margin-top:12px;text-align:center;line-height:1.5;
 }
 .auth-logo {
   display:flex;align-items:center;justify-content:center;margin-bottom:28px;
@@ -7230,6 +7262,7 @@ html.dark .hdr-ai-btn {
     </div>
     <div class="tab-row" id="rbacTabRow">
       <button class="tab active" onclick="rbacTab('users')">Users</button>
+      <button class="tab" onclick="rbacTab('requests')">Access Requests</button>
       <button class="tab" onclick="rbacTab('roles')">Roles & Permissions</button>
       <button class="tab" onclick="rbacTab('sessions')">Active Sessions</button>
       <button class="tab" onclick="rbacTab('2fa')">2FA Settings</button>
@@ -7262,6 +7295,33 @@ html.dark .hdr-ai-btn {
     <div class="modal-ft">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('inviteUserModal')">Cancel</button>
       <button class="btn btn-primary btn-sm" onclick="inviteUserAction()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- Approve Access Request Modal -->
+<div class="modal-ov" id="approveRequestModal">
+  <div class="modal" style="width:440px">
+    <div class="modal-hdr"><h3>Approve Access Request</h3><button class="close-x" onclick="closeModal('approveRequestModal')"><svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4l12 12M16 4L4 16" stroke-linecap="round"/></svg></button></div>
+    <div class="modal-body">
+      <div style="font-size:12.5px;color:var(--ink4);margin-bottom:14px">Company: <strong style="color:var(--ink)" id="approveReqCompany"></strong></div>
+      <div class="form-group"><label class="form-label">Assign Role</label>
+        <select class="form-input" id="approveReqRole">
+          <option value="read_only">Read-Only — View only, no actions</option>
+          <option value="support">Support — View transactions, initiate refunds</option>
+          <option value="developer">Developer — API, webhooks, sandbox</option>
+          <option value="finance">Finance — Settlements, refunds, reports</option>
+          <option value="risk_analyst">Risk Analyst — Risk &amp; compliance only</option>
+          <option value="super_admin">Super Admin — Full access</option>
+        </select>
+      </div>
+      <div style="font-size:11.5px;color:var(--ink4);background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px">
+        This creates the login account immediately with a temporary password shown once to you. Share it with the company contact yourself as you onboard them — this does not email them automatically.
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('approveRequestModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="approveAccessRequestActionConfirm()">Approve &amp; Create Account</button>
     </div>
   </div>
 </div>
@@ -11402,6 +11462,9 @@ function rbacTab(t){
   if(t==='users'){
     el.innerHTML=`<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Loading team…</div>`;
     refreshRbacUsers();
+  } else if(t==='requests'){
+    el.innerHTML=`<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Loading access requests…</div>`;
+    refreshAccessRequests();
   } else if(t==='roles'){
     el.innerHTML=`<div class="g2 gap14">
       <div class="card">
@@ -11564,6 +11627,86 @@ async function inviteUserAction(){
     document.getElementById('invName').value = '';
     await refreshRbacUsers();
   }catch(e){ toast('Invite failed: '+(e?.message||e),'warn',4000); }
+}
+
+// ── Access Requests (Request Access sign-up review) ─────────────
+let _pendingApproveReqId = null;
+
+async function refreshAccessRequests(){
+  const el = document.getElementById('rbacContent');
+  if(!el) return;
+  let requests = [];
+  try{
+    const db = await _waitForSpDb();
+    requests = await db.fetchAccessRequests();
+  }catch(e){
+    console.error('[BipraPay] Failed to load access requests',e);
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Couldn't load access requests — check your connection and retry.</div>`;
+    return;
+  }
+
+  if(!requests.length){
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">No access requests yet. New "Request Access" sign-ups from the login page will appear here.</div>`;
+    return;
+  }
+
+  const statusBadge = { pending: 'b-pending', approved: 'b-active', rejected: 'b-failed' };
+  el.innerHTML=`<div class="tbl-wrap"><table>
+    <thead><tr><th>Company</th><th>Contact</th><th>Volume</th><th>Submitted</th><th>Status</th><th></th></tr></thead>
+    <tbody>${requests.map(r=>`<tr>
+      <td>
+        <div style="font-weight:600">${r.company_name}</div>
+        ${r.trading_name?`<div style="font-size:11px;color:var(--ink4)">t/a ${r.trading_name}</div>`:''}
+        ${r.business_type?`<div style="font-size:11px;color:var(--ink4)">${r.business_type}</div>`:''}
+      </td>
+      <td>
+        <div style="font-size:12.5px;font-weight:500">${r.contact_name}</div>
+        <div style="font-size:11px;color:var(--ink4)">${r.contact_email}${r.contact_phone?' · '+r.contact_phone:''}</div>
+      </td>
+      <td style="font-size:12px;color:var(--ink4)">${r.expected_monthly_volume||'—'}</td>
+      <td style="font-size:11px;color:var(--ink4);font-family:var(--mono)">${new Date(r.created_at).toISOString().slice(0,10)}</td>
+      <td><span class="badge ${statusBadge[r.status]}">${r.status}</span></td>
+      <td>${r.status==='pending'
+        ? `<div style="display:flex;gap:6px">
+             <button class="btn btn-primary btn-xs" onclick="openApproveRequestModal('${r.id}', ${JSON.stringify(r.company_name)})">Approve</button>
+             <button class="btn btn-danger btn-xs" onclick="rejectAccessRequestAction('${r.id}', ${JSON.stringify(r.company_name)})">Reject</button>
+           </div>`
+        : `<span style="font-size:11px;color:var(--ink4)">${r.status==='rejected' && r.rejection_reason ? r.rejection_reason : ''}</span>`}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function openApproveRequestModal(requestId, companyName){
+  _pendingApproveReqId = requestId;
+  const label = document.getElementById('approveReqCompany');
+  if(label) label.textContent = companyName;
+  openModal('approveRequestModal');
+}
+
+async function approveAccessRequestActionConfirm(){
+  if(!_pendingApproveReqId) return;
+  const roleId = document.getElementById('approveReqRole')?.value || 'read_only';
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.approveAccessRequest(_pendingApproveReqId, roleId);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    closeModal('approveRequestModal');
+    alert(`Account created.\n\nTemporary password (shown once — share it securely with the company contact and have them change it on first login):\n\n${res.tempPassword}`);
+    _pendingApproveReqId = null;
+    await refreshAccessRequests();
+  }catch(e){ toast('Approval failed: '+(e?.message||e),'warn',4000); }
+}
+
+async function rejectAccessRequestAction(requestId, companyName){
+  const reason = prompt(`Reject the access request from ${companyName}? Optionally add a reason (shared internally, not sent to the requester automatically):`);
+  if(reason === null) return;
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.rejectAccessRequest(requestId, reason||null);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    toast(`Request from ${companyName} rejected`,'warn',3000);
+    await refreshAccessRequests();
+  }catch(e){ toast('Rejection failed: '+(e?.message||e),'warn',4000); }
 }
 
 // ══════════════════════════════════════
@@ -17615,20 +17758,46 @@ setTimeout(()=>{
     <div class="auth-logo">
       <img src="/logo-wide.svg" alt="BipraPay">
     </div>
+    <div class="auth-switch" id="authSwitch">
+      <button class="auth-switch-tab active" id="authSwitchSignin" onclick="authShowPane('signin')">Sign in</button>
+      <button class="auth-switch-tab" id="authSwitchRequest" onclick="authShowPane('request')">Request access</button>
+    </div>
+
     <div id="authStep1">
       <div class="auth-title">Sign in</div>
-      <div class="auth-sub">BipraPay Gateway Console · Super Admin</div>
+      <div class="auth-sub">BipraPay Gateway Console</div>
       <div class="auth-input-wrap">
         <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="16" height="12" rx="2"/><path d="M2 9l8 5 8-5" stroke-linecap="round"/></svg>
-        <input class="auth-input" type="email" id="authEmail" placeholder="ananya@biprapay.com" value="ananya@biprapay.com">
+        <input class="auth-input" type="email" id="authEmail" placeholder="you@company.com" autocomplete="username">
       </div>
       <div class="auth-input-wrap">
         <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="9" width="10" height="8" rx="2"/><path d="M7 9V7a3 3 0 016 0v2" stroke-linecap="round"/></svg>
-        <input class="auth-input" type="password" id="authPass" placeholder="Password" value="Demo2026!" onkeydown="if(event.key==='Enter')authLogin()">
+        <input class="auth-input" type="password" id="authPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')authLogin()">
       </div>
       <button class="auth-btn" onclick="authLogin()">Sign In</button>
-      <div class="auth-divider">Secured by AWS Cognito · MFA · POPIA</div>
+
+      <div class="auth-or"><span>or continue with</span></div>
+      <div class="auth-oauth-row">
+        <button class="auth-oauth-btn" onclick="authOAuth('google')">
+          <svg width="16" height="16" viewBox="0 0 20 20"><path fill="#4285F4" d="M19.6 10.23c0-.71-.06-1.4-.18-2.05H10v3.88h5.38a4.6 4.6 0 01-2 3.02v2.5h3.23c1.9-1.75 2.99-4.32 2.99-7.35z"/><path fill="#34A853" d="M10 20c2.7 0 4.96-.9 6.62-2.42l-3.23-2.5c-.9.6-2.04.96-3.39.96-2.6 0-4.8-1.76-5.59-4.12H1.06v2.59A10 10 0 0010 20z"/><path fill="#FBBC05" d="M4.41 11.92A6 6 0 014.09 10c0-.67.11-1.32.32-1.92V5.49H1.06A10 10 0 000 10c0 1.61.39 3.14 1.06 4.51l3.35-2.59z"/><path fill="#EA4335" d="M10 3.96c1.47 0 2.79.5 3.82 1.5l2.87-2.87C14.95 1 12.7 0 10 0 6.09 0 2.71 2.24 1.06 5.49l3.35 2.59C5.2 5.72 7.4 3.96 10 3.96z"/></svg>
+          Google
+        </button>
+        <button class="auth-oauth-btn" onclick="authOAuth('azure')">
+          <svg width="16" height="16" viewBox="0 0 20 20"><rect x="0" y="0" width="9.2" height="9.2" fill="#F25022"/><rect x="10.8" y="0" width="9.2" height="9.2" fill="#7FBA00"/><rect x="0" y="10.8" width="9.2" height="9.2" fill="#00A4EF"/><rect x="10.8" y="10.8" width="9.2" height="9.2" fill="#FFB900"/></svg>
+          Microsoft
+        </button>
+      </div>
+      <button class="auth-sso-link" onclick="authToggleSSO()">Sign in with company SSO</button>
+      <div id="authSSOBox" style="display:none;margin-top:6px">
+        <div class="auth-input-wrap">
+          <input class="auth-input" style="padding-left:12px" id="authSSODomain" placeholder="yourcompany.com" onkeydown="if(event.key==='Enter')authSSO()">
+        </div>
+        <button class="auth-btn ghost" onclick="authSSO()">Continue with SSO</button>
+      </div>
+
+      <div class="auth-divider">Secured by Supabase Auth · MFA · POPIA</div>
     </div>
+
     <div id="authStep2" style="display:none">
       <div class="auth-title">Two-factor auth</div>
       <div class="auth-sub">Enter the 6-digit code from your authenticator</div>
@@ -17644,6 +17813,54 @@ setTimeout(()=>{
       <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--ink4)">
         Google Authenticator / Authy · Backup: SMS +27 82 *** 8210
       </div>
+    </div>
+
+    <div id="authRequestPane" style="display:none">
+      <div class="auth-title">Request access</div>
+      <div class="auth-sub">Tell us about your company. An admin reviews every request, assigns your role, and issues your password directly — nothing here creates a login on its own.</div>
+      <div class="form-group"><label class="form-label">Company name</label><input class="form-input" id="reqCompany" placeholder="Acme Trading (Pty) Ltd"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Trading name</label><input class="form-input" id="reqTrading" placeholder="Optional"></div>
+        <div class="form-group"><label class="form-label">Registration no.</label><input class="form-input" id="reqRegNo" placeholder="Optional"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Your name</label><input class="form-input" id="reqName" placeholder="Jane Dube"></div>
+        <div class="form-group"><label class="form-label">Work email</label><input class="form-input" type="email" id="reqEmail" placeholder="jane@acme.co.za"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="reqPhone" placeholder="Optional"></div>
+        <div class="form-group"><label class="form-label">Business type</label>
+          <select class="form-input" id="reqBizType">
+            <option value="">Select…</option>
+            <option>Retail / E-commerce</option>
+            <option>Marketplace / Platform</option>
+            <option>SaaS / Subscription</option>
+            <option>Financial services</option>
+            <option>Non-profit</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Expected monthly volume</label>
+        <select class="form-input" id="reqVolume">
+          <option value="">Select…</option>
+          <option>Under R100k</option>
+          <option>R100k – R500k</option>
+          <option>R500k – R2m</option>
+          <option>R2m – R10m</option>
+          <option>Over R10m</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">What do you need BipraPay for?</label><textarea class="form-input" id="reqUseCase" rows="2" placeholder="Optional — helps us route your request"></textarea></div>
+      <button class="auth-btn" onclick="submitAccessRequestAction()">Submit request</button>
+      <div class="auth-req-note">We don't auto-create accounts. Our team reviews your details and reaches out to onboard your company.</div>
+    </div>
+
+    <div id="authRequestSuccess" style="display:none;text-align:center;padding:12px 0 4px">
+      <svg width="40" height="40" viewBox="0 0 20 20" fill="none" stroke="var(--gr)" stroke-width="2" style="margin:0 auto 12px;display:block"><circle cx="10" cy="10" r="9"/><path d="M6 10l3 3 5-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="auth-title">Request received</div>
+      <div class="auth-sub" id="authReqSuccessMsg">We'll review your details and be in touch to finish setting up your account.</div>
+      <button class="auth-btn ghost" onclick="authShowPane('signin')">Back to sign in</button>
     </div>
   </div>
   <div style="margin-top:20px;text-align:center;font-size:11.5px;color:var(--ink5)">
@@ -20645,7 +20862,7 @@ async function authLogin(){
   if(error){
     const input = document.getElementById('authPass');
     if(input){ input.style.borderColor='var(--red)'; input.style.boxShadow='0 0 0 3px var(--red-bg)'; }
-    toast('Invalid credentials. Try ananya@biprapay.com / Demo2026!','warn',4000);
+    toast('Invalid email or password. New here? Use Request Access below.','warn',4000);
     setTimeout(()=>{ if(input){ input.style.borderColor=''; input.style.boxShadow=''; }},2000);
     return;
   }
@@ -20703,6 +20920,68 @@ async function finalizeLogin(){
   document.querySelector('.app-body')?.style.removeProperty('pointer-events');
   nav('dashboard');
   loadLiveData();
+}
+
+// ── Sign-in pane switching, OAuth, SSO, Request Access ──────────
+function authShowPane(pane){
+  document.getElementById('authSwitchSignin')?.classList.toggle('active', pane==='signin');
+  document.getElementById('authSwitchRequest')?.classList.toggle('active', pane==='request');
+  const map = { signin: 'authStep1', request: 'authRequestPane' };
+  document.getElementById('authStep1').style.display = pane==='signin' ? 'block' : 'none';
+  document.getElementById('authRequestPane').style.display = pane==='request' ? 'block' : 'none';
+  document.getElementById('authRequestSuccess').style.display = 'none';
+  document.getElementById('authSwitch').style.display = 'flex';
+}
+
+async function authOAuth(provider){
+  const db = await _waitForSpDb();
+  const { error } = await db.signInWithOAuth(provider);
+  if(error) toast('Sign-in with '+(provider==='google'?'Google':'Microsoft')+' isn\'t configured yet: '+error.message,'warn',5000);
+}
+
+function authToggleSSO(){
+  const box = document.getElementById('authSSOBox');
+  if(box) box.style.display = box.style.display==='none' ? 'block' : 'none';
+}
+
+async function authSSO(){
+  const domain = document.getElementById('authSSODomain')?.value?.trim();
+  if(!domain){ toast('Enter your company domain','warn',3000); return; }
+  const db = await _waitForSpDb();
+  const { error } = await db.signInWithSSO(domain);
+  if(error) toast('SSO for '+domain+' isn\'t set up yet: '+error.message,'warn',5000);
+}
+
+async function submitAccessRequestAction(){
+  const companyName = document.getElementById('reqCompany')?.value?.trim();
+  const contactName = document.getElementById('reqName')?.value?.trim();
+  const contactEmail = document.getElementById('reqEmail')?.value?.trim();
+  if(!companyName || !contactName || !contactEmail){
+    toast('Company name, your name, and work email are required','warn',3500);
+    return;
+  }
+  const payload = {
+    companyName,
+    tradingName: document.getElementById('reqTrading')?.value?.trim() || null,
+    registrationNumber: document.getElementById('reqRegNo')?.value?.trim() || null,
+    contactName,
+    contactEmail,
+    contactPhone: document.getElementById('reqPhone')?.value?.trim() || null,
+    businessType: document.getElementById('reqBizType')?.value || null,
+    expectedMonthlyVolume: document.getElementById('reqVolume')?.value || null,
+    useCase: document.getElementById('reqUseCase')?.value?.trim() || null,
+  };
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.requestAccess(payload);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    document.getElementById('authStep1').style.display = 'none';
+    document.getElementById('authRequestPane').style.display = 'none';
+    document.getElementById('authSwitch').style.display = 'none';
+    document.getElementById('authReqSuccessMsg').textContent =
+      `We'll review ${companyName} and be in touch at ${contactEmail} to finish setting up your account.`;
+    document.getElementById('authRequestSuccess').style.display = 'block';
+  }catch(e){ toast('Couldn\'t submit your request: '+(e?.message||e),'warn',4500); }
 }
 
 async function authLogout(){
