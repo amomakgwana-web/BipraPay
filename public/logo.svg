@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+  <rect width="1000" height="1000" fill="#F30D0D"/>
+  <circle cx="248" cy="398" r="26" fill="#FFFFFF"/>
+  <text x="500" y="560" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-weight="800"
+        font-size="150" letter-spacing="-4" fill="#FFFFFF">Bipra<tspan>Pay</tspan></text>
+</svg>

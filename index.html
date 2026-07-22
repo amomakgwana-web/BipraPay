@@ -6,6 +6,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="/logo.svg">
+<link rel="apple-touch-icon" href="/logo.svg">
 <title>BipraPay — Enterprise Payment Gateway</title>
 <script type="module" src="/src/backend.js"></script>
 
@@ -104,12 +106,9 @@ header::after{
   border-right:1px solid var(--border);flex-shrink:0;
 }
 .logo-mark{
-  width:36px;height:36px;background:none;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  overflow:hidden;
+  height:32px;width:auto;display:flex;align-items:center;flex-shrink:0;
 }
-.logo-mark svg { width:36px; height:36px; display:block; }
-.logo-mark svg{width:16px;height:16px;fill:white}
+.logo-mark img{height:32px;width:auto;display:block;border-radius:6px}
 .logo-name{font-size:15px;font-weight:700;color:var(--ink);letter-spacing:-.4px}
 .logo-name span{color:var(--brand)}
 .logo-badge{
@@ -2446,14 +2445,9 @@ html.dark .tab-row .tab.active { background: var(--bg3); }
   border-radius:16px;padding:36px;box-shadow:0 8px 40px rgba(11,15,26,.12);
 }
 .auth-logo {
-  display:flex;align-items:center;gap:10px;margin-bottom:28px;
+  display:flex;align-items:center;justify-content:center;margin-bottom:28px;
 }
-.auth-logo .logo-mark {
-  width:44px;height:44px;background:none;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  overflow:hidden;
-}
-.auth-logo .logo-mark svg { width:44px;height:44px;display:block; }
+.auth-logo img { height:44px;width:auto;display:block;border-radius:9px; }
 .auth-logo-name { font-size:20px;font-weight:800;color:var(--ink);letter-spacing:-.4px; }
 .auth-logo-name span { color:var(--brand); }
 .auth-title { font-size:22px;font-weight:800;color:var(--ink);margin-bottom:4px;letter-spacing:-.3px; }
@@ -3691,8 +3685,7 @@ html.dark .hdr-ai-btn {
   <!-- ── Row 1: Logo + search + actions ── -->
   <div class="hdr-row1">
     <div class="hdr-logo">
-      <div class="logo-mark"><svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"> <circle cx="20" cy="20" r="20" fill="#F05A00"/> <g transform="translate(20,20)">  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(0)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(51.4)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(102.9)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(154.3)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(205.7)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(257.1)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(308.6)"/> </g></svg></div>
-      <div class="logo-name">Bipra<span>Pay</span></div>
+      <div class="logo-mark"><img src="/logo-wide.svg" alt="BipraPay"></div>
     </div>
     <div class="hdr-search">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8.5" cy="8.5" r="5"/><path d="M15 15l-3.5-3.5" stroke-linecap="round"/></svg>
@@ -17617,8 +17610,7 @@ setTimeout(()=>{
 <div class="auth-gate" id="authGate">
   <div class="auth-card">
     <div class="auth-logo">
-      <div class="logo-mark"><svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"> <circle cx="20" cy="20" r="20" fill="#F05A00"/> <g transform="translate(20,20)">  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(0)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(51.4)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(102.9)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(154.3)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(205.7)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(257.1)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(308.6)"/> </g></svg></div>
-      <div class="auth-logo-name">Bipra<span>Pay</span></div>
+      <img src="/logo-wide.svg" alt="BipraPay">
     </div>
     <div id="authStep1">
       <div class="auth-title">Sign in</div>
@@ -22562,9 +22554,7 @@ function buildHPPPage(el){
             </div>
             <div style="padding:16px;background:white">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-                <div style="width:28px;height:28px;background:var(--brand);border-radius:8px;display:flex;align-items:center;justify-content:center">
-                  <svg width="14" height="14" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="20" fill="#F05A00"/><g transform="translate(20,20)"><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(0)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(51.4)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(102.9)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(154.3)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(205.7)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(257.1)"/><path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(308.6)"/></g></svg>
-                </div>
+                <img src="/logo.svg" alt="BipraPay" style="width:28px;height:28px;border-radius:8px;display:block">
                 <div>
                   <div style="font-size:13px;font-weight:700">Sipho's Store</div>
                   <div style="font-size:11px;color:#888">ORDER-0042</div>
