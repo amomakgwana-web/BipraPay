@@ -17766,6 +17766,13 @@ setTimeout(()=>{
     <div id="authStep1">
       <div class="auth-title">Sign in</div>
       <div class="auth-sub">BipraPay Gateway Console</div>
+      <div class="auth-input-wrap" id="authDemoPickerWrap" style="display:none">
+        <select class="auth-input" id="authDemoPicker" style="padding-left:12px;appearance:auto" onchange="authFillDemo(this.value)">
+          <option value="">Quick sign-in (sandbox demo accounts)…</option>
+          <option value="ananya">Ananya Mukherjee — Super Admin</option>
+          <option value="sipho">Sipho Dlamini — Finance</option>
+        </select>
+      </div>
       <div class="auth-input-wrap">
         <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="16" height="12" rx="2"/><path d="M2 9l8 5 8-5" stroke-linecap="round"/></svg>
         <input class="auth-input" type="email" id="authEmail" placeholder="you@company.com" autocomplete="username">
@@ -20921,6 +20928,26 @@ async function finalizeLogin(){
   nav('dashboard');
   loadLiveData();
 }
+
+// ── Sandbox-only quick sign-in picker (never shown in production) ──
+const DEMO_ACCOUNTS = {
+  ananya: { email: 'ananya@biprapay.com', password: 'Demo2026!' },
+  sipho:  { email: 'sipho@biprapay.com',  password: 'Demo2026!' },
+};
+function authFillDemo(key){
+  const acct = DEMO_ACCOUNTS[key];
+  if(!acct) return;
+  const email = document.getElementById('authEmail');
+  const pass = document.getElementById('authPass');
+  if(email) email.value = acct.email;
+  if(pass) pass.value = acct.password;
+}
+_waitForSpDb().then(db=>{
+  if(db.env === 'sandbox'){
+    const wrap = document.getElementById('authDemoPickerWrap');
+    if(wrap) wrap.style.display = 'block';
+  }
+});
 
 // ── Sign-in pane switching, OAuth, SSO, Request Access ──────────
 function authShowPane(pane){
